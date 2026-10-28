@@ -7,7 +7,7 @@ privacy-safe shipment tracking and business quote requests, and a role-based
 operations console for staff who manage shipments, tracking events, exceptions,
 tracking codes and documents.
 
-The public site is Crownline Express (`crownlineexpress.org`). See
+The public site is Crownline Express (`crownlineexpress.com`). See
 [`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for what is
 implemented and tested, and [`docs/DEPLOY.md`](docs/DEPLOY.md) for hosting and
 Spaceship DNS.

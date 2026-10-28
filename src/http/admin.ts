@@ -1,9 +1,13 @@
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { Router, type NextFunction, type Request, type Response } from 'express';
+import { findServiceByCode, type ShipmentType } from '../config/services.ts';
+import { estimate } from '../domain/pricing.ts';
+import { formatMoney } from '../domain/money.ts';
 import { can, canAssignRole, type Permission } from '../domain/permissions.ts';
 import { AppError, ConflictError, ForbiddenError, ValidationError } from '../lib/errors.ts';
 import type { SafeHtml } from '../lib/html.ts';
 import { listAudit } from '../services/audit.ts';
+import { createCharge, setChargeStatus } from '../services/charges.ts';
 import { SESSION_ABSOLUTE_MS, changePassword, clearFlash, createUser, getSession, login, logout, setFlash, type Flash, type Session } from '../services/auth.ts';
 import { dashboardMetrics } from '../services/dashboard.ts';
 import { generateQuoteEstimate, generateShipmentSummary, type GeneratedDocument } from '../services/documents.ts';
@@ -11,12 +15,12 @@ import { loadMilestones } from '../services/milestones.ts';
 import { getQuoteRequest, listContactMessages, listQuoteRequests, markContactHandled, updateQuoteStatus } from '../services/quotes.ts';
 import {
   addStaffEvent, archiveShipment, cancelShipment, createShipment, getShipment, getShipmentDetail, listShipments, openException,
-  resolveException, setEstimatedDelivery, voidEvent, type ShipmentListFilters, type StaffActor,
+  resolveException, setDisplayProgress, setEstimatedDelivery, voidEvent, type ShipmentDetail, type ShipmentListFilters, type StaffActor,
 } from '../services/shipments.ts';
 import { issueTrackingCode, revokeTrackingCode } from '../services/tracking.ts';
 import { changeUserRole, listUsers, resetUserPassword, setUserStatus } from '../services/users.ts';
 import {
-  AddEventSchema, CreateShipmentSchema, CreateUserSchema, EstimatedDeliverySchema, LoginSchema, OpenExceptionSchema, PasswordChangeSchema,
+  AddEventSchema, ChargeSchema, ChargeStatusSchema, CreateShipmentSchema, CreateUserSchema, DisplayProgressSchema, EstimatedDeliverySchema, LoginSchema, OpenExceptionSchema, PasswordChangeSchema,
   QuoteStatusSchema, ReasonSchema, ResolveExceptionSchema, UpdateRoleSchema, fieldErrors, type FieldErrors,
 } from '../validation/schemas.ts';
 import type { Values } from '../views/components.ts';
@@ -260,9 +264,47 @@ export function adminRouter(ctx: AppContext): Router {
     }
   });
 
+  const coverNoteFor = (detail: ShipmentDetail): string => {
+    const s = detail.shipment;
+    if (!s.cover_included) return 'Not included';
+    const service = findServiceByCode(s.service_code);
+    const pack = detail.packages[0];
+    if (!service?.pricingServiceCode || !pack || s.declared_value_minor == null) return 'Included';
+    const types: readonly ShipmentType[] = ['parcel', 'document', 'pallet', 'freight'];
+    const shipmentType = types.find((t) => t === s.shipment_type) ?? 'parcel';
+    const km = s.distance_km == null ? null : Number(s.distance_km);
+    const out = estimate(
+      {
+        pricingServiceCode: service.pricingServiceCode,
+        shipmentType,
+        originCountry: s.origin_country,
+        destinationCountry: s.destination_country,
+        weightUnit: 'kg',
+        lengthUnit: 'cm',
+        packages: [{
+          quantity: Number(pack.quantity),
+          weight: Number(pack.weight_kg),
+          length: Number(pack.length_cm),
+          width: Number(pack.width_cm),
+          height: Number(pack.height_cm),
+        }],
+        declaredValueMinor: Number(s.declared_value_minor),
+        insurance: true,
+        distanceKm: Number.isFinite(km) ? km : null,
+      },
+      ctx.rateCard,
+      config.pricingMode,
+    );
+    if (!out.ok) return 'Included';
+    const line = out.result.lines.find((item) => item.code === 'cover');
+    if (!line) return 'Included';
+    const money = formatMoney(line.amountMinor, out.result.currency);
+    return config.pricingMode === 'demo' ? `Included · sample ${money} (not a quote)` : `Included · ${money}`;
+  };
+
   const renderDetail = async (req: Request, res: Response, id: string, extras: Partial<DetailExtras> = {}, status = 200) => {
     const [detail, defs] = await Promise.all([getShipmentDetail(db, id), loadMilestones(db)]);
-    await page(req, res, detail.shipment.reference, shipmentDetailPage((req as AuthedRequest).session, detail, defs, { issueKey: newFormKey(), ...extras }), status);
+    await page(req, res, detail.shipment.reference, shipmentDetailPage((req as AuthedRequest).session, detail, defs, { issueKey: newFormKey(), coverNote: coverNoteFor(detail), ...extras }), status);
   };
 
   r.get('/shipments/:id', requirePermission('shipments.read'), (req, res) => renderDetail(req, res, req.params.id as string));
@@ -307,6 +349,42 @@ export function adminRouter(ctx: AppContext): Router {
     await redirect(req, res, `/admin/shipments/${id}#issues`, { kind: 'success', message: 'Issue marked as resolved.' });
   });
 
+  r.post('/shipments/:id/progress', requirePermission('events.create'), async (req, res) => {
+    const id = req.params.id as string;
+    const parsed = DisplayProgressSchema.safeParse(bodyValues(req));
+    if (!parsed.success) return redirect(req, res, `/admin/shipments/${id}#progress`, { kind: 'error', message: 'Enter a whole number from 0 to 99, or clear the figure.' });
+    try {
+      await setDisplayProgress(db, actorOf(req), id, parsed.data.displayProgress, parsed.data.clear === '1');
+      await redirect(req, res, `/admin/shipments/${id}#progress`, { kind: 'success', message: parsed.data.clear === '1' ? 'The customer page now follows the milestone percentage.' : 'The percentage on the customer tracking page has been updated.' });
+    } catch (err) {
+      if (err instanceof ValidationError) return redirect(req, res, `/admin/shipments/${id}#progress`, { kind: 'error', message: err.fieldErrors.map((f) => f.message).join(' ') });
+      throw err;
+    }
+  });
+
+  r.post('/shipments/:id/charges', requirePermission('charges.manage'), async (req, res) => {
+    const id = req.params.id as string;
+    const values = bodyValues(req);
+    const parsed = ChargeSchema.safeParse(values);
+    if (!parsed.success) return renderDetail(req, res, id, { chargeErrors: fieldErrors(parsed.error), chargeValues: values }, 400);
+    try {
+      await createCharge(db, actorOf(req), id, parsed.data);
+      await redirect(req, res, `/admin/shipments/${id}#charges`, { kind: 'success', message: parsed.data.visibility === 'published' ? 'Charge published to the customer tracking page.' : 'Charge saved as a draft. Publish it when the customer should see it.' });
+    } catch (err) {
+      if (err instanceof ValidationError) return renderDetail(req, res, id, { chargeErrors: validationToFields(err), chargeValues: values }, 400);
+      throw err;
+    }
+  });
+
+  r.post('/shipments/:id/charges/:chargeId', requirePermission('charges.manage'), async (req, res) => {
+    const id = req.params.id as string;
+    const parsed = ChargeStatusSchema.safeParse(bodyValues(req));
+    if (!parsed.success) return redirect(req, res, `/admin/shipments/${id}#charges`, { kind: 'error', message: 'Choose a valid charge status.' });
+    await setChargeStatus(db, actorOf(req), id, req.params.chargeId as string, parsed.data.status);
+    const label = parsed.data.status === 'published' ? 'Charge published to the customer page.' : parsed.data.status === 'settled' ? 'Charge recorded as settled. No card payment was taken here.' : parsed.data.status === 'withdrawn' ? 'Charge withdrawn from the customer page.' : 'Charge returned to draft.';
+    await redirect(req, res, `/admin/shipments/${id}#charges`, { kind: 'success', message: label });
+  });
+
   r.post('/shipments/:id/estimated-delivery', requirePermission('events.create'), async (req, res) => {
     const id = req.params.id as string;
     const parsed = EstimatedDeliverySchema.safeParse(bodyValues(req));
@@ -324,7 +402,7 @@ export function adminRouter(ctx: AppContext): Router {
       return redirect(req, res, `/admin/shipments/${id}#codes`, { kind: 'error', message: 'A code was already issued from this form. Codes are shown only once; if it was not copied, revoke it and issue a new one.' });
     }
     const shipment = await getShipment(db, id);
-    await page(req, res, 'Tracking code issued', codeIssuedPage(shipment, result.code, result.expiresAt));
+    await page(req, res, 'Tracking code issued', codeIssuedPage(config.siteUrl, shipment, result.code, result.expiresAt));
   });
 
   r.post('/shipments/:id/codes/:credentialId/revoke', requirePermission('tracking_codes.revoke'), async (req, res) => {

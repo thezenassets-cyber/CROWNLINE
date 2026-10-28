@@ -8,7 +8,7 @@ server. GitHub is the source Render builds from.
 1. GitHub `thezenassets-cyber/CROWNLINE` is still empty. This machine is signed
    in as `xsugax`, which cannot push.
 2. Render has nothing to build until that repository has `main`.
-3. `crownlineexpress.org` on Spaceship cannot serve Node by itself.
+3. `crownlineexpress.com` on Spaceship cannot serve Node by itself.
 
 Do the three steps below in order.
 
@@ -45,53 +45,55 @@ Environment the Blueprint sets:
 After the custom domain works, in Render → Environment set:
 
 ```
-SITE_URL=https://crownlineexpress.org
+SITE_URL=https://crownlineexpress.com
 ```
 
 Then create an owner account:
 
 ```
-npm run user:create -- --email you@crownlineexpress.org --name "Your Name" --role owner
+npm run user:create -- --email you@crownlineexpress.com --name "Your Name" --role owner
 ```
 
 Run that as a **Render Shell** command on the service, and save the temporary
-password. Sign in at `https://crownlineexpress.org/admin`.
+password. Sign in at `https://crownlineexpress.com/admin`.
 
 Move to Render PostgreSQL when you are ready for more than one instance:
 create a Postgres instance, set `DATABASE_URL`, set `ALLOW_EMBEDDED_DB=false`,
 and run `npm run migrate` in the shell.
 
-## 3. Spaceship DNS for crownlineexpress.org
+## 3. Spaceship DNS for crownlineexpress.com
 
 In Render → the web service → **Settings → Custom Domains → Add**:
 
-- `www.crownlineexpress.org`
-- Render also adds the root `crownlineexpress.org` and redirects one to the other.
+- `www.crownlineexpress.com`
+- Render also adds the root `crownlineexpress.com` and redirects one to the other.
 
 Copy the CNAME target Render shows (it looks like `crownline-express.onrender.com`).
 
-In Spaceship → the domain → **DNS**:
+In Spaceship → the domain → **Advanced DNS** → **Custom records**.
+Spaceship stores a root CNAME as an ALIAS. Add these two records and no others for the website:
 
 | Type | Host | Value | TTL |
 | --- | --- | --- | --- |
-| CNAME | `www` | `crownline-express.onrender.com` (use the exact target Render shows) | 3600 |
-| CNAME or ALIAS | `@` | the same Render target, if Spaceship allows CNAME on the root | 3600 |
+| CNAME | `@` | the exact `*.onrender.com` hostname Render shows for this service | 3600 |
+| CNAME | `www` | the same hostname | 3600 |
 
-If Spaceship will not CNAME the root (`@`), add the **A records Render displays**
-for that custom domain instead. Remove any `AAAA` (IPv6) records.
+Do not also add an A record for `@` or `www`. Delete every existing A and AAAA record on `@` and `www`. Leave MX and mail TXT records alone if the domain already receives email.
+
+If Spaceship rejects the CNAME on `@`, use one A record instead: host `@`, value `216.24.57.1` (Render’s load balancer, from Render’s DNS guide). Keep the `www` CNAME. Still delete AAAA records.
 
 Do not point the domain at GitHub Pages.
 
 Wait for DNS, then in Render click **Verify**. When it succeeds, visit
-https://crownlineexpress.org/healthz — it must return 200. Then set `SITE_URL`
+https://crownlineexpress.com/healthz — it must return 200. Then set `SITE_URL`
 as above and redeploy.
 
 ## Checklist before calling the site live
 
 - [ ] GitHub `main` has this codebase
 - [ ] Render health check is green
-- [ ] https://crownlineexpress.org opens over HTTPS
+- [ ] https://crownlineexpress.com opens over HTTPS
 - [ ] Calculator, tracking, quote and contact work
 - [ ] `/admin` sign-in works for the owner you created
-- [ ] `SITE_URL` is `https://crownlineexpress.org`
+- [ ] `SITE_URL` is `https://crownlineexpress.com`
 - [ ] No DHL / FedEx / other carrier logos (none are connected)

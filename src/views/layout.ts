@@ -1,9 +1,10 @@
 import { html, raw, type SafeHtml } from '../lib/html.ts';
 import type { AppConfig } from '../config/env.ts';
 import { SERVICES } from '../config/services.ts';
+import { LANGS, LANG_LABEL, textDir, translate, type Lang, type Theme } from '../i18n/index.ts';
 import { crownlineMark, icons } from './icons.ts';
 
-export const ASSET_VERSION = '0.4.0';
+export const ASSET_VERSION = '0.13.0';
 
 export interface PageMeta {
   title: string;
@@ -12,40 +13,56 @@ export interface PageMeta {
   noindex?: boolean;
   preloadImage?: string;
   bodyClass?: string;
+  lang?: Lang;
+  theme?: Theme;
+  nonce?: string;
 }
 
 const NAV = [
-  { href: '/services', label: 'Services' },
-  { href: '/how-it-works', label: 'How it works' },
-  { href: '/calculator', label: 'Calculator' },
-  { href: '/track', label: 'Track' },
-  { href: '/services/business-shipping', label: 'Business' },
-  { href: '/contact', label: 'Contact' },
+  { href: '/services', key: 'nav.services' },
+  { href: '/#overview', key: 'nav.overview' },
+  { href: '/how-it-works', key: 'nav.how' },
+  { href: '/calculator', key: 'nav.calculator' },
+  { href: '/#tracking', key: 'nav.tracking' },
+  { href: '/#contact', key: 'nav.contact' },
 ];
 
-function navLinks(path: string): SafeHtml {
+function navLinks(path: string, lang: Lang): SafeHtml {
   return html`${NAV.map((n) => {
     const current = path === n.href || (n.href !== '/services' && path.startsWith(`${n.href}/`));
-    return html`<li><a href="${n.href}" ${current ? html`aria-current="page"` : ''}>${n.label}</a></li>`;
+    return html`<li><a href="${n.href}" ${current ? html`aria-current="page"` : ''}>${translate(lang, n.key, n.key)}</a></li>`;
   })}`;
 }
 
-export function brand(): SafeHtml {
-  return html`<a class="brand" href="/" aria-label="Crownline Express home">
+function preferences(path: string, lang: Lang, theme: Theme): SafeHtml {
+  const next = encodeURIComponent(path || '/');
+  return html`<div class="pref-bar">
+    <div class="theme-switch" role="group" aria-label="${translate(lang, 'pref.appearance', 'Appearance')}">
+      <button type="button" data-theme-set="light" aria-pressed="${theme === 'light' ? 'true' : 'false'}">${translate(lang, 'pref.light', 'Light')}</button>
+      <button type="button" data-theme-set="dark" aria-pressed="${theme === 'dark' ? 'true' : 'false'}">${translate(lang, 'pref.dark', 'Dark')}</button>
+    </div>
+    <nav class="lang-switch" aria-label="${translate(lang, 'pref.language', 'Language')}">
+      ${LANGS.map((code) => html`<a href="/preferences?lang=${code}&next=${next}" title="${LANG_LABEL[code]}" ${code === lang ? html`aria-current="true"` : ''}>${code.toUpperCase()}</a>`)}
+    </nav>
+  </div>`;
+}
+
+export function brand(lang: Lang = 'en'): SafeHtml {
+  return html`<a class="brand" href="/" aria-label="${translate(lang, 'nav.home', 'Crownline Express home')}">
     ${crownlineMark()}
     <span class="brand-text"><span class="brand-name">Crownline</span><span class="brand-sub">Express</span></span>
   </a>`;
 }
 
-function footer(config: AppConfig): SafeHtml {
+function footer(config: AppConfig, lang: Lang): SafeHtml {
   const c = config.company;
   const hasContact = c.email || c.phone || c.address;
   const year = new Date().getUTCFullYear();
   return html`<footer class="site-footer">
     <div class="container footer-grid">
       <div class="footer-brand">
-        ${brand()}
-        <p class="footer-domain">crownlineexpress.org</p>
+        ${brand(lang)}
+        <p class="footer-domain">crownlineexpress.com</p>
         <p class="footer-tagline">One Partner. A World of Possibilities.</p>
         <p class="small">Crownline Express coordinates shipping through suitable carriers and transport partners. Each request is reviewed by our team before booking.</p>
       </div>
@@ -87,7 +104,7 @@ function footer(config: AppConfig): SafeHtml {
     </div>
     <div class="container footer-base">
       <p>© ${year} ${c.legalName ?? 'Crownline Express'}. All rights reserved.</p>
-      <p>crownlineexpress.org</p>
+      <p>crownlineexpress.com</p>
     </div>
   </footer>`;
 }
@@ -112,7 +129,11 @@ export function publicLayout(config: AppConfig, meta: PageMeta, body: SafeHtml):
       },
     ],
   }).replace(/</g, '\\u003c');
-  return `<!doctype html>${html`<html lang="en">
+  const lang = meta.lang ?? 'en';
+  const theme = meta.theme ?? 'light';
+  const quote = translate(lang, 'nav.quote', 'Request a quote');
+  const menu = translate(lang, 'nav.menu', 'Menu');
+  return `<!doctype html>${html`<html lang="${lang}" dir="${textDir(lang)}" data-theme="${theme}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -132,26 +153,30 @@ export function publicLayout(config: AppConfig, meta: PageMeta, body: SafeHtml):
   <meta name="twitter:description" content="${meta.description}">
   <meta name="twitter:image" content="${config.siteUrl}/images/hero-container-port-blue-hour.jpg">
   <meta name="application-name" content="Crownline Express">
-  <meta name="theme-color" content="#0b1629">
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="${theme === 'dark' ? '#101820' : '#fbfaf6'}">
+  <link rel="icon" href="/favicon.svg?v=${ASSET_VERSION}" type="image/svg+xml">
   <link rel="preload" href="/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   ${meta.preloadImage ? html`<link rel="preload" as="image" href="${meta.preloadImage}" fetchpriority="high">` : ''}
   <link rel="stylesheet" href="/css/site.css?v=${ASSET_VERSION}">
+  ${meta.bodyClass?.includes('page-home') || meta.bodyClass?.includes('page-services') ? html`<link rel="stylesheet" href="/css/home.css?v=${ASSET_VERSION}">` : ''}
   <script type="application/ld+json">${raw(ld)}</script>
+  ${meta.nonce ? html`<script nonce="${meta.nonce}">try{var n=performance.getEntriesByType('navigation')[0];if(n&&n.type==='reload')document.documentElement.classList.add('boot-on');}catch(e){}</script>` : ''}
   <script src="/js/site.js?v=${ASSET_VERSION}" defer></script>
 </head>
 <body class="${meta.bodyClass ?? ''}">
+  <div class="boot" aria-hidden="true">${crownlineMark(72)}</div>
   <a class="skip-link" href="#main">Skip to main content</a>
-  ${config.pricingMode === 'demo' ? html`<div class="demo-ribbon" role="note">A coordinator confirms every price in writing before booking. The calculator labels sample figures. Tracking shows confirmed milestones only.</div>` : ''}
   <header class="site-header">
     <div class="container header-inner">
-      ${brand()}
-      <nav class="nav-desktop" aria-label="Main"><ul>${navLinks(meta.path)}</ul></nav>
-      <a class="btn btn-gold btn-sm header-cta" href="/quote">Request a quote</a>
+      ${brand(lang)}
+      <nav class="nav-desktop" aria-label="Main"><ul>${navLinks(meta.path, lang)}</ul></nav>
+      ${preferences(meta.path, lang, theme)}
+      <a class="btn btn-gold btn-sm header-cta" href="/quote">${quote}</a>
       <details class="nav-mobile">
-        <summary aria-label="Menu"><span class="burger" aria-hidden="true"></span><span class="nav-mobile-label">Menu</span></summary>
+        <summary aria-label="${menu}"><span class="burger" aria-hidden="true"></span><span class="nav-mobile-label">${menu}</span></summary>
         <nav aria-label="Main (mobile)">
-          <ul>${navLinks(meta.path)}<li><a href="/quote">Request a quote</a></li></ul>
+          ${preferences(meta.path, lang, theme)}
+          <ul>${navLinks(meta.path, lang)}<li><a href="/quote">${quote}</a></li></ul>
         </nav>
       </details>
     </div>
@@ -159,7 +184,7 @@ export function publicLayout(config: AppConfig, meta: PageMeta, body: SafeHtml):
   <main id="main" tabindex="-1">
     ${body}
   </main>
-  ${footer(config)}
+  ${footer(config, lang)}
 </body>
 </html>`}`;
 }

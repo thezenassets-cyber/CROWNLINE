@@ -1,11 +1,11 @@
 import { randomBytes } from 'node:crypto';
 import { Router, type Request, type Response } from 'express';
 import { SERVICES, findServiceByCode, findServiceBySlug } from '../config/services.ts';
-import { toMinor } from '../domain/money.ts';
 import { estimate, type EstimateOutcome } from '../domain/pricing.ts';
 import type { SafeHtml } from '../lib/html.ts';
 import { createContactMessage, createQuoteRequest } from '../services/quotes.ts';
 import { lookupTracking } from '../services/tracking.ts';
+import { trackingFeed } from '../views/public/track.ts';
 import { ContactSchema, EstimateFormSchema, QuoteRequestSchema, fieldErrors, type EstimateForm, type FieldErrors } from '../validation/schemas.ts';
 import type { Values } from '../views/components.ts';
 import { publicLayout, type PageMeta } from '../views/layout.ts';
@@ -15,11 +15,12 @@ import {
   aboutPage, calculatorPage, claimsPage, contactPage, cookiesPage, errorPage, faqPage, howItWorksPage, privacyPage,
   quotePage, quoteSubmittedPage, serviceDetailPage, servicesIndexPage, termsPage, trackPage,
 } from '../views/public/pages.ts';
+import { readPrefs, safeNext, isLang, type Lang, type Theme } from '../i18n/index.ts';
 import type { AppContext } from './context.ts';
 import { clientIp } from './security.ts';
 
 const STATIC_PAGES: { path: string; meta: Omit<PageMeta, 'path'>; view: () => SafeHtml }[] = [
-  { path: '/services', meta: { title: 'Shipping services', description: 'Domestic and international parcels, air, ocean and road freight, and business shipping coordinated by Crownline Express.' }, view: servicesIndexPage },
+  { path: '/services', meta: { title: 'Shipping services', description: 'Domestic and international parcels, air, ocean and road freight, and business shipping coordinated by Crownline Express.', bodyClass: 'page-services' }, view: servicesIndexPage },
   { path: '/how-it-works', meta: { title: 'How it works', description: 'Each step of shipping with Crownline, from quote to confirmed delivery, explained in plain language.' }, view: howItWorksPage },
   { path: '/about', meta: { title: 'About', description: 'Crownline Express coordinates shipping across available carriers with one point of contact and one clear view.' }, view: aboutPage },
   { path: '/faq', meta: { title: 'Frequently asked questions', description: 'Answers about estimates, dimensional weight, tracking codes, customs and claims.' }, view: faqPage },
@@ -63,8 +64,8 @@ export function runEstimate(ctx: AppContext, form: EstimateForm): EstimateOutcom
       weightUnit: form.weightUnit,
       lengthUnit: form.lengthUnit,
       packages: [{ quantity: form.quantity, weight: form.weight, length: form.length, width: form.width, height: form.height }],
-      declaredValueMinor: form.declaredValue !== undefined ? toMinor(form.declaredValue) : null,
-      insurance: form.insurance,
+      declaredValueMinor: null,
+      insurance: false,
     },
     ctx.rateCard,
     ctx.config.pricingMode,
@@ -83,8 +84,26 @@ export function publicRouter(ctx: AppContext): Router {
   const { config, db, logger, limiters } = ctx;
 
   const send = (res: Response, meta: PageMeta, body: SafeHtml, status = 200) => {
-    res.status(status).type('html').send(publicLayout(config, meta, body));
+    const prefs = readPrefs(res.req);
+    const nonce = typeof res.locals.cspNonce === 'string' ? res.locals.cspNonce : undefined;
+    res.status(status).type('html').send(publicLayout(config, { ...meta, lang: prefs.lang, theme: prefs.theme, nonce }, body));
   };
+
+  const setPrefCookie = (res: Response, name: string, value: string) => {
+    res.append('Set-Cookie', `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=31536000; SameSite=Lax`);
+  };
+
+  r.get('/preferences', (req, res) => {
+    let fallback = '/';
+    const ref = req.get('referer');
+    if (ref) {
+      try { fallback = safeNext(new URL(ref).pathname); } catch { fallback = '/'; }
+    }
+    const next = safeNext(req.query.next, fallback);
+    if (isLang(typeof req.query.lang === 'string' ? req.query.lang : undefined)) setPrefCookie(res, 'lang', req.query.lang as Lang);
+    if (req.query.theme === 'light' || req.query.theme === 'dark') setPrefCookie(res, 'theme', req.query.theme as Theme);
+    res.redirect(303, next);
+  });
   const tooMany = (res: Response, path: string, retryAfter: number) => {
     res.setHeader('Retry-After', String(retryAfter));
     send(res, { title: 'Please slow down', description: '', path, noindex: true }, errorPage(429, 'Please slow down', 'We received a lot of requests from your connection. Please wait a few minutes and try again.'), 429);
@@ -93,52 +112,72 @@ export function publicRouter(ctx: AppContext): Router {
   r.get('/', (req, res) => {
     send(res, {
       title: 'Crownline Express | Your Shipments. One Clear View.',
-      description: 'Coordinate shipping, compare available options, and follow your shipment from dispatch to delivery with greater clarity.',
+      description: 'One coordinator, a written quote before booking, and a private tracking code after it.',
       path: '/',
       preloadImage: '/images/hero-container-port-blue-hour.webp',
       bodyClass: 'page-home',
-    }, homePage(config, queryValues(req, CALCULATOR_FIELDS)));
+    }, homePage(config, queryValues(req, CALCULATOR_FIELDS), readPrefs(req).lang));
   });
 
   r.get('/calculator', (req, res) => {
     const values = queryValues(req, CALCULATOR_FIELDS);
     const meta: PageMeta = { title: 'Shipping calculator', description: 'Work out the billable weight of your shipment and see an indicative estimate.', path: '/calculator' };
-    if (values.weight === undefined) return send(res, meta, calculatorPage(config, values, undefined, null));
+    const lang = readPrefs(req).lang;
+    if (values.weight === undefined) return send(res, meta, calculatorPage(config, values, undefined, null, lang));
     const limit = limiters.estimate.hit(clientIp(req));
     if (!limit.allowed) return tooMany(res, '/calculator', limit.retryAfterSeconds);
     meta.noindex = true;
     const parsed = EstimateFormSchema.safeParse(values);
-    if (!parsed.success) return send(res, meta, calculatorPage(config, values, fieldErrors(parsed.error), null), 400);
+    if (!parsed.success) return send(res, meta, calculatorPage(config, values, fieldErrors(parsed.error), null, lang), 400);
     const outcome = runEstimate(ctx, parsed.data);
     if (!outcome.ok) {
       const errors: FieldErrors = {};
       for (const e of outcome.errors) errors[e.field] ??= e.message;
-      return send(res, meta, calculatorPage(config, values, errors, null), 422);
+      return send(res, meta, calculatorPage(config, values, errors, null, lang), 422);
     }
-    send(res, meta, calculatorPage(config, values, undefined, outcome.result));
+    send(res, meta, calculatorPage(config, values, undefined, outcome.result, lang));
+  });
+
+  r.get('/track/feed', async (req, res, next) => {
+    try {
+      res.setHeader('Referrer-Policy', 'no-referrer');
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+      const raw = typeof req.query.code === 'string' ? req.query.code.slice(0, 64) : '';
+      const ip = clientIp(req);
+      if (!raw.trim() || limiters.trackFailures.isBlocked(ip) || !limiters.trackLookup.hit(ip).allowed) {
+        return res.status(429).json({ error: 'limited' });
+      }
+      const result = await lookupTracking(db, raw, config.trackingCodeSecret);
+      if (result.status !== 'found') return res.status(404).json({ error: 'not_found' });
+      res.json(trackingFeed(result.view, readPrefs(req).lang));
+    } catch (err) {
+      next(err);
+    }
   });
 
   r.get('/track', async (req, res, next) => {
     try {
       res.setHeader('Referrer-Policy', 'no-referrer');
       res.setHeader('Cache-Control', 'no-store');
+      const lang = readPrefs(req).lang;
       const meta: PageMeta = { title: 'Track a shipment', description: 'Follow your Crownline shipment with your private tracking code.', path: '/track' };
       const raw = typeof req.query.code === 'string' ? req.query.code.slice(0, 64) : '';
-      if (!raw.trim()) return send(res, meta, trackPage('', {}));
+      if (!raw.trim()) return send(res, meta, trackPage('', {}, lang));
       meta.noindex = true;
       res.setHeader('X-Robots-Tag', 'noindex, nofollow');
       const ip = clientIp(req);
       if (limiters.trackFailures.isBlocked(ip) || !limiters.trackLookup.hit(ip).allowed) {
         logger.warn('tracking.rate_limited', { ip });
-        return send(res, meta, trackPage(raw, { error: TRACK_MESSAGES.limited }), 429);
+        return send(res, meta, trackPage(raw, { error: TRACK_MESSAGES.limited }, lang), 429);
       }
       const result = await lookupTracking(db, raw, config.trackingCodeSecret);
-      if (result.status === 'found') return send(res, meta, trackPage(raw, { view: result.view }));
+      if (result.status === 'found') return send(res, meta, trackPage(raw, { view: result.view }, lang));
       if (result.status !== 'invalid_format') {
         const f = limiters.trackFailures.hit(ip);
         if (!f.allowed) logger.warn('tracking.failure_threshold', { ip });
       }
-      send(res, meta, trackPage(raw, { error: TRACK_MESSAGES[result.status] }), 404);
+      send(res, meta, trackPage(raw, { error: TRACK_MESSAGES[result.status] }, readPrefs(req).lang), 404);
     } catch (err) {
       next(err);
     }
@@ -147,7 +186,7 @@ export function publicRouter(ctx: AppContext): Router {
   r.get('/services/:slug', (req, res, next) => {
     const s = findServiceBySlug(req.params.slug);
     if (!s) return next();
-    send(res, { title: s.name, description: s.shortDescription, path: `/services/${s.slug}`, preloadImage: s.image.src.replace(/\.jpg$/, '.webp') }, serviceDetailPage(s));
+    send(res, { title: s.name, description: s.shortDescription, path: `/services/${s.slug}`, preloadImage: s.image.src.replace(/\.jpg$/, '.webp') }, serviceDetailPage(s, readPrefs(req).lang));
   });
 
   for (const p of STATIC_PAGES) r.get(p.path, (_req, res) => send(res, { ...p.meta, path: p.path }, p.view()));
@@ -155,7 +194,7 @@ export function publicRouter(ctx: AppContext): Router {
   r.get('/quote', (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     send(res, { title: 'Request a quote', description: 'Send your shipment details and a Crownline coordinator will reply with a confirmed price.', path: '/quote' },
-      quotePage(config, queryValues(req, CALCULATOR_FIELDS), undefined, newFormKey()));
+      quotePage(config, queryValues(req, CALCULATOR_FIELDS), undefined, newFormKey(), readPrefs(req).lang));
   });
 
   r.post('/quote', async (req, res, next) => {
@@ -164,14 +203,15 @@ export function publicRouter(ctx: AppContext): Router {
       const meta: PageMeta = { title: 'Request a quote', description: '', path: '/quote', noindex: true };
       const ip = clientIp(req);
       const values = bodyValues(req);
+      const lang = readPrefs(req).lang;
       const limit = limiters.publicForms.hit(ip);
       if (!limit.allowed) return tooMany(res, '/quote', limit.retryAfterSeconds);
       const parsed = QuoteRequestSchema.safeParse(values);
       const key = /^[A-Za-z0-9_-]{16,64}$/.test(values.idempotencyKey ?? '') ? values.idempotencyKey! : newFormKey();
-      if (!parsed.success) return send(res, meta, quotePage(config, values, fieldErrors(parsed.error), key), 400);
+      if (!parsed.success) return send(res, meta, quotePage(config, values, fieldErrors(parsed.error), key, lang), 400);
       const service = findServiceByCode(parsed.data.service);
       if (!service || service.availability !== 'quote_on_request') {
-        return send(res, meta, quotePage(config, values, { service: 'Choose one of the available services.' }, key), 400);
+        return send(res, meta, quotePage(config, values, { service: 'Choose one of the available services.' }, key, lang), 400);
       }
       let est = null;
       if (service.pricingServiceCode) {

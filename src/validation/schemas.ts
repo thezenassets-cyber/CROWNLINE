@@ -179,6 +179,13 @@ export const CreateShipmentSchema = z.object({
     .optional()
     .transform((v) => (v ? v : undefined))
     .refine((v) => v === undefined || /^[A-Z]{3}$/.test(v), 'Use a three-letter currency code such as USD.'),
+  distanceKm: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v ? Number(v) : undefined))
+    .refine((v) => v === undefined || (Number.isFinite(v) && v >= 0 && v <= 40_000), 'Enter the distance in kilometres, up to 40,000.'),
+  coverIncluded: checkbox,
   estimatedDeliveryDate: z
     .string()
     .trim()
@@ -215,6 +222,32 @@ export const OpenExceptionSchema = z.object({
 
 export const ResolveExceptionSchema = z.object({
   resolutionNote: z.string().trim().min(3, 'Describe how the issue was resolved.').max(500),
+});
+
+export const DisplayProgressSchema = z.object({
+  displayProgress: z.string().trim().max(3).optional(),
+  clear: z.string().trim().optional(),
+});
+
+export const ChargeSchema = z.object({
+  description: z.string().trim().min(3, 'Describe the charge in at least 3 characters.').max(160),
+  amount: z
+    .string()
+    .trim()
+    .refine((v) => /^\d+(\.\d{1,2})?$/.test(v) && Number(v) >= 0 && Number(v) <= 10_000_000, 'Enter an amount from 0 to 10000000, with up to two decimal places.'),
+  currency: z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/, 'Use a three-letter currency code such as USD.'),
+  issuedOn: z
+    .string()
+    .trim()
+    .optional()
+    .transform((v) => (v ? v : undefined))
+    .refine((v) => v === undefined || /^\d{4}-\d{2}-\d{2}$/.test(v), 'Use a valid issue date.'),
+  publicNote: optionalText(300),
+  visibility: z.enum(['draft', 'published']),
+});
+
+export const ChargeStatusSchema = z.object({
+  status: z.enum(['draft', 'published', 'settled', 'withdrawn']),
 });
 
 export const EstimatedDeliverySchema = z.object({

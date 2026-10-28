@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
 import type { AppConfig } from '../config/env.ts';
 
@@ -16,7 +17,10 @@ export function securityHeaders(config: AppConfig) {
     ...(config.isProduction ? ['upgrade-insecure-requests'] : []),
   ].join('; ');
   return (_req: Request, res: Response, next: NextFunction) => {
-    res.setHeader('Content-Security-Policy', csp);
+    const nonce = randomBytes(16).toString('base64');
+    res.locals.cspNonce = nonce;
+    const policy = csp.replace("script-src 'self'", `script-src 'self' 'nonce-${nonce}'`);
+    res.setHeader('Content-Security-Policy', policy);
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');

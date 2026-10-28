@@ -38,6 +38,7 @@ export const PERMISSIONS = [
   'users.manage',
   'settings.read',
   'finance.read',
+  'charges.manage',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -66,6 +67,7 @@ export const ROLE_PERMISSIONS: Record<Role, ReadonlySet<Permission>> = {
     'documents.generate',
     'audit.read',
     'settings.read',
+    'charges.manage',
   ]),
   tracking_operator: new Set<Permission>(['shipments.read', 'events.create', 'exceptions.manage']),
   customer_support: new Set<Permission>([
@@ -75,7 +77,7 @@ export const ROLE_PERMISSIONS: Record<Role, ReadonlySet<Permission>> = {
     'contact.read',
     'documents.generate',
   ]),
-  finance: new Set<Permission>(['shipments.read', 'quotes.read', 'finance.read', 'documents.generate']),
+  finance: new Set<Permission>(['shipments.read', 'quotes.read', 'finance.read', 'documents.generate', 'charges.manage']),
   auditor: new Set<Permission>(['shipments.read', 'quotes.read', 'contact.read', 'audit.read', 'settings.read']),
   business_customer: new Set<Permission>(),
 };

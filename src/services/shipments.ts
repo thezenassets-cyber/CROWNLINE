@@ -4,6 +4,7 @@ import { shipmentReference } from '../domain/codes.ts';
 import { EXCEPTION_CATEGORIES, INFO_EVENT_TYPES, type ExceptionCategory, type EventSource } from '../domain/events.ts';
 import { can, type Role } from '../domain/permissions.ts';
 import { computeProgress, DELIVERED_MILESTONE } from '../domain/progress.ts';
+import { straightLineKm } from '../domain/distance.ts';
 import { toCm, toKg } from '../domain/units.ts';
 import { toMinor } from '../domain/money.ts';
 import { findServiceByCode } from '../config/services.ts';
@@ -11,6 +12,7 @@ import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '.
 import { zonedLocalToUtc } from '../lib/time.ts';
 import type { CreateShipmentForm } from '../validation/schemas.ts';
 import { recordAudit, type Actor } from './audit.ts';
+import { listCharges, type ChargeRow } from './charges.ts';
 import { loadMilestones } from './milestones.ts';
 
 export interface StaffActor extends Actor {
@@ -36,9 +38,13 @@ export interface ShipmentRow {
   contents_description: string | null;
   declared_value_minor: number | null;
   declared_value_currency: string | null;
+  distance_km: string | null;
+  distance_source: 'estimated' | 'coordinator' | null;
+  cover_included: boolean;
   lifecycle_state: 'active' | 'cancelled' | 'archived';
   current_milestone: string | null;
   progress_percent: number;
+  display_progress: number | null;
   last_event_at: Date | null;
   delivered_at: Date | null;
   estimated_delivery_date: string | null;
@@ -54,8 +60,9 @@ export const SHIPMENT_COLUMNS = `
   s.id, s.reference, s.service_code, s.shipment_type, s.carrier_name, s.carrier_tracking_number,
   s.origin_city, s.origin_region, s.origin_postal_code, s.origin_country,
   s.destination_city, s.destination_region, s.destination_postal_code, s.destination_country,
-  s.contents_description, s.declared_value_minor, s.declared_value_currency, s.lifecycle_state,
-  s.current_milestone, s.progress_percent, s.last_event_at, s.delivered_at,
+  s.contents_description, s.declared_value_minor, s.declared_value_currency,
+  s.distance_km::text as distance_km, s.distance_source, s.cover_included, s.lifecycle_state,
+  s.current_milestone, s.progress_percent, s.display_progress, s.last_event_at, s.delivered_at,
   s.estimated_delivery_date::text as estimated_delivery_date, s.estimated_delivery_source,
   s.cancelled_at, s.cancel_reason, s.archived_at, s.created_at, s.updated_at`;
 
@@ -86,6 +93,12 @@ export async function createShipment(db: Db, actor: StaffActor, form: CreateShip
   if (form.declaredValue !== undefined && !form.declaredValueCurrency) {
     throw new ValidationError([{ field: 'declaredValueCurrency', message: 'Enter the currency of the declared value.' }]);
   }
+  if (form.coverIncluded && form.declaredValue === undefined) {
+    throw new ValidationError([{ field: 'declaredValue', message: 'Enter the declared value before including shipment cover.' }]);
+  }
+  const estimatedKm = straightLineKm(form.originCountry, form.destinationCountry);
+  const distanceKm = form.distanceKm ?? estimatedKm;
+  const distanceSource = form.distanceKm !== undefined ? 'coordinator' : estimatedKm !== null ? 'estimated' : null;
 
   return db.transaction(async (tx) => {
     const existing = (
@@ -102,8 +115,9 @@ export async function createShipment(db: Db, actor: StaffActor, form: CreateShip
              origin_city, origin_region, origin_postal_code, origin_country,
              destination_city, destination_region, destination_postal_code, destination_country,
              contents_description, declared_value_minor, declared_value_currency,
+             distance_km, distance_source, cover_included,
              estimated_delivery_date, estimated_delivery_source, create_request_key, created_by)
-           values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+           values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
            on conflict (reference) do nothing
            returning id, reference`,
           [
@@ -113,6 +127,7 @@ export async function createShipment(db: Db, actor: StaffActor, form: CreateShip
             form.contentsDescription ?? null,
             form.declaredValue !== undefined ? toMinor(form.declaredValue) : null,
             form.declaredValue !== undefined ? form.declaredValueCurrency : null,
+            distanceKm, distanceSource, form.coverIncluded,
             form.estimatedDeliveryDate ?? null, form.estimatedDeliveryDate ? 'staff_estimate' : null,
             form.idempotencyKey, actor.userId,
           ],
@@ -301,6 +316,7 @@ export interface ShipmentDetail {
   exceptions: ExceptionRow[];
   credentials: CredentialRow[];
   documents: DocumentRow[];
+  charges: ChargeRow[];
 }
 
 export async function getShipment(q: Queryable, id: string): Promise<ShipmentRow> {
@@ -312,7 +328,7 @@ export async function getShipment(q: Queryable, id: string): Promise<ShipmentRow
 
 export async function getShipmentDetail(q: Queryable, id: string): Promise<ShipmentDetail> {
   const shipment = await getShipment(q, id);
-  const [parties, packages, events, exceptions, credentials, documents] = await Promise.all([
+  const [parties, packages, events, exceptions, credentials, documents, charges] = await Promise.all([
     q.query<PartyRow>(`select party_role, name, company, email, phone, address_line1, address_line2, city, region, postal_code, country from shipment_parties where shipment_id = $1 order by party_role desc`, [id]),
     q.query<PackageRow>(`select package_index, quantity, weight_kg::text, length_cm::text, width_cm::text, height_cm::text, description from shipment_packages where shipment_id = $1 order by package_index`, [id]),
     q.query<EventRow>(
@@ -341,6 +357,7 @@ export async function getShipmentDetail(q: Queryable, id: string): Promise<Shipm
        where d.shipment_id = $1 order by d.generated_at desc limit 20`,
       [id],
     ),
+    listCharges(q, id),
   ]);
   return {
     shipment,
@@ -350,6 +367,7 @@ export async function getShipmentDetail(q: Queryable, id: string): Promise<Shipm
     exceptions: exceptions.rows,
     credentials: credentials.rows,
     documents: documents.rows,
+    charges,
   };
 }
 
@@ -631,6 +649,34 @@ export async function setEstimatedDelivery(db: Db, actor: StaffActor, shipmentId
       entityType: 'shipment',
       entityId: shipmentId,
       details: { estimatedDeliveryDate: date ?? null, source: 'staff_estimate' },
+    });
+  });
+}
+
+/** Sets or clears the percentage the customer sees. Does not invent a vehicle position. */
+export async function setDisplayProgress(db: Db, actor: StaffActor, shipmentId: string, raw: string | undefined, clear: boolean): Promise<void> {
+  requirePermission(actor, 'events.create');
+  await db.transaction(async (tx) => {
+    const shipment = await lockActiveShipment(tx, shipmentId);
+    let value: number | null = null;
+    if (!clear) {
+      if (!raw || !/^\d{1,3}$/.test(raw)) {
+        throw new ValidationError([{ field: 'displayProgress', message: 'Enter a whole number from 0 to 99, or clear it to use the milestone percentage.' }]);
+      }
+      value = Number(raw);
+      if (value > 99) {
+        throw new ValidationError([{ field: 'displayProgress', message: '100% is shown only after delivery is confirmed with evidence.' }]);
+      }
+    }
+    if (shipment.delivered_at) {
+      throw new ValidationError([{ field: 'displayProgress', message: 'Delivery is already confirmed, so the customer sees 100%.' }]);
+    }
+    await tx.query(`update shipments set display_progress = $2, updated_at = now() where id = $1`, [shipmentId, value]);
+    await recordAudit(tx, audit(actor), {
+      action: 'shipment.progress_set',
+      entityType: 'shipment',
+      entityId: shipmentId,
+      details: { displayProgress: value, milestoneProgress: shipment.progress_percent },
     });
   });
 }

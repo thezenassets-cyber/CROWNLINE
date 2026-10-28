@@ -274,8 +274,8 @@ export const SERVICES: readonly ServiceDefinition[] = [
     code: 'fulfillment',
     slug: 'fulfillment',
     name: 'Shipment coordination & fulfilment',
-    shortDescription: 'Storage, pick-and-pack and order dispatch. Not yet offered.',
-    availability: 'planned',
+    shortDescription: 'A coordinator arranges storage, packing and dispatch. The written confirmation names the facility.',
+    availability: 'quote_on_request',
     pricingServiceCode: null,
     shipmentTypes: ['parcel'],
     scope: 'either',
@@ -284,15 +284,29 @@ export const SERVICES: readonly ServiceDefinition[] = [
       alt: 'A large, organised distribution centre with tall pallet racks, a forklift and two workers in hi-vis vests.',
     },
     page: {
-      headline: 'Fulfilment services are planned, not yet available.',
+      headline: 'Storage, packing and dispatch, confirmed in writing.',
       whatItIs:
-        'Fulfilment means storing your stock, packing orders as they arrive and handing them to carriers. Crownline does not currently operate warehousing or fulfilment. This page describes the service we intend to offer so you know what to expect.',
-      whoItSuits: ['Online sellers who want to outsource storage and packing (when available)'],
-      process: [
-        { title: 'Not yet available', detail: 'We are not accepting fulfilment requests yet. You can still request quotes for transport services.' },
+        'Shipment coordination and fulfilment means a Crownline coordinator arranges storage, packing and handoff to a carrier. The written confirmation names the facility and what is included. Crownline does not publish a warehouse count.',
+      whoItSuits: [
+        'Online sellers who want storage and packing arranged for them',
+        'Businesses that need goods held, then dispatched as orders arrive',
       ],
-      informationNeeded: [],
-      goodToKnow: ['This page will be updated when the service becomes available.'],
+      process: [
+        { title: 'Describe the goods', detail: 'Tell us what would be stored, typical order sizes and where orders should go.' },
+        { title: 'Review', detail: 'A coordinator checks the facility, the handling and the documents.' },
+        { title: 'Confirm', detail: 'You receive the facility name, the price and the conditions in writing before anything is booked.' },
+        { title: 'Dispatch and track', detail: 'Each dispatch receives a reference and a private tracking code.' },
+      ],
+      informationNeeded: [
+        'What will be stored, and roughly how much',
+        'Typical order size, weight and destination countries',
+        'How orders will be sent to Crownline',
+        'Any packing or labeling you need named on the confirmation',
+      ],
+      goodToKnow: [
+        'The facility is named on the confirmation. It is not implied by the photographs.',
+        'Transport after dispatch is quoted as its own service unless the confirmation includes it.',
+      ],
     },
   },
 ];

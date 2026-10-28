@@ -2,6 +2,22 @@
 (function () {
   'use strict';
 
+  document.documentElement.classList.add('is-ready');
+
+  document.querySelectorAll('[data-theme-set]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var theme = btn.getAttribute('data-theme-set');
+      if (theme !== 'light' && theme !== 'dark') return;
+      document.documentElement.setAttribute('data-theme', theme);
+      document.querySelectorAll('[data-theme-set]').forEach(function (other) {
+        other.setAttribute('aria-pressed', other.getAttribute('data-theme-set') === theme ? 'true' : 'false');
+      });
+      document.cookie = 'theme=' + theme + '; Path=/; Max-Age=31536000; SameSite=Lax';
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.setAttribute('content', theme === 'dark' ? '#101820' : '#fbfaf6');
+    });
+  });
+
   // Move focus to results, errors or confirmations so screen-reader and keyboard users land on what changed.
   var target = document.querySelector('[data-autofocus]');
   if (target && typeof target.focus === 'function') {

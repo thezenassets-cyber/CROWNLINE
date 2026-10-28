@@ -1,9 +1,10 @@
 import { html, type SafeHtml } from '../../lib/html.ts';
+import { translate, type Lang } from '../../i18n/index.ts';
 import type { AppConfig } from '../../config/env.ts';
-import { SERVICES, type ServiceDefinition } from '../../config/services.ts';
-import { badge, picture, type Values } from '../components.ts';
+import { type ServiceDefinition } from '../../config/services.ts';
+import { type Values } from '../components.ts';
 import { icons } from '../icons.ts';
-import { calculatorForm, pricingModeNotice, priceFactors } from './calculator.ts';
+import { calculatorForm, priceFactors } from './calculator.ts';
 import { trackForm, trackingPreview } from './track.ts';
 import { FAQ_ITEMS } from './content.ts';
 
@@ -17,286 +18,351 @@ const SERVICE_ICONS: Record<string, () => SafeHtml> = {
   fulfillment: icons.warehouse,
 };
 
+const SERVICE_TAGS: Record<string, string[]> = {
+  domestic_parcel: ['Same country', 'Boxes'],
+  international_parcel: ['Cross-border', 'Customs papers'],
+  air_freight: ['Time-critical', 'Named carrier'],
+  ocean_freight: ['Shared', 'Dedicated'],
+  road_freight: ['Domestic', 'Cross-border'],
+  business_shipping: ['Recurring', 'One contact'],
+  fulfillment: ['Storage', 'Packing', 'Dispatch'],
+};
+
 export function serviceCard(s: ServiceDefinition): SafeHtml {
-  return html`<article class="service-card">
-    <a class="service-media" href="/services/${s.slug}" tabindex="-1" aria-hidden="true">
-      ${picture({ src: s.image.src, alt: '', width: 640, height: 400 })}
-    </a>
-    <div class="service-body">
-      <div class="service-top">
-        <span class="service-icon">${(SERVICE_ICONS[s.code] ?? icons.parcel)()}</span>
-        ${s.availability === 'planned' ? badge('Not currently offered', 'warning') : badge('Quote on request', 'gold')}
-      </div>
-      <h3><a href="/services/${s.slug}">${s.name}</a></h3>
-      <p>${s.shortDescription}</p>
-    </div>
-  </article>`;
+  return homeService(
+    `/services/${s.slug}`,
+    (SERVICE_ICONS[s.code] ?? icons.parcel)(),
+    s.name,
+    s.shortDescription,
+    SERVICE_TAGS[s.code] ?? ['Quote on request'],
+    s.image,
+  );
 }
 
-export function homePage(config: AppConfig, calcValues: Values): SafeHtml {
-  return html`
-  <section class="hero" aria-labelledby="hero-title">
-    <div class="hero-media">
-      <picture class="hero-still">
-        <source srcset="/images/hero-container-port-blue-hour.webp" type="image/webp">
-        <img src="/images/hero-container-port-blue-hour.jpg" alt="" width="1280" height="720" fetchpriority="high" decoding="async">
-      </picture>
-      <video autoplay muted loop playsinline poster="/images/hero-container-port-blue-hour.jpg">
+function homeService(
+  href: string,
+  icon: SafeHtml,
+  title: string,
+  text: string,
+  tags: string[],
+  photo: { src: string; alt: string },
+): SafeHtml {
+  return html`<a class="home-service" href="${href}">
+    <img class="home-service-photo" src="${photo.src}" alt="${photo.alt}" width="900" height="1200">
+    <span class="home-service-body">
+      <span class="home-ico">${icon}</span>
+      <h3>${title}</h3>
+      <p>${text}</p>
+      <div class="home-tags">${tags.map((t) => html`<span>${t}</span>`)}</div>
+    </span>
+  </a>`;
+}
+
+function film(src: string, poster: string, kicker: string, title: string): SafeHtml {
+  return html`<figure class="home-film">
+    <img class="home-still" src="${poster}" alt="" width="1280" height="800">
+    <video autoplay muted loop playsinline poster="${poster}"><source src="${src}" type="video/mp4"></video>
+    <figcaption><span>${kicker}</span> ${title}</figcaption>
+  </figure>`;
+}
+
+function shot(src: string, alt: string, label: string, featured = false): SafeHtml {
+  return html`<figure class="home-shot ${featured ? 'home-shot-lead' : ''}"><img src="${src}" alt="${alt}" width="1400" height="900"><figcaption>${label}</figcaption></figure>`;
+}
+
+export function homePage(config: AppConfig, calcValues: Values, lang: Lang = 'en'): SafeHtml {
+  return html`<div class="home">
+  <section class="home-hero" aria-labelledby="hero-title">
+    <div class="home-hero-media" aria-hidden="true">
+      <img class="home-hero-still" src="/images/ops/hero-poster.jpg" alt="" width="1600" height="1000">
+      <video class="home-hero-film" autoplay muted loop playsinline poster="/images/ops/hero-poster.jpg">
         <source src="/video/port-operations.mp4" type="video/mp4">
       </video>
+      <div class="home-hero-scrim"></div>
     </div>
-    <div class="container hero-inner">
-      <div class="hero-copy">
-        <p class="eyebrow eyebrow-gold">One Partner. A World of Possibilities.</p>
-        <h1 id="hero-title">Your Shipments.<br>One Clear View.</h1>
-        <p class="lead">Coordinate shipping, compare available options, and follow your shipment from dispatch to delivery with greater clarity. Quotes are confirmed in writing. Tracking shows confirmed milestones on map, satellite and terrain.</p>
-        <div class="hero-actions">
-          <a class="btn btn-gold" href="#calculate">${icons.calculator()} Calculate Shipping</a>
-          <a class="btn btn-outline-light" href="#track">${icons.search()} Track a Shipment</a>
-          <a class="btn btn-link-light" href="/quote?service=business_shipping">Request a Business Quote ${icons.arrowRight()}</a>
+    <div class="container home-hero-copy">
+      <div class="home-hero-text">
+        <h1 class="home-title" id="hero-title">Crownline Express</h1>
+        <p class="home-discipline">${translate(lang, 'hero.discipline', 'Shipping coordination')}</p>
+        <p class="lead">${translate(lang, 'hero.lead', 'You receive a written quote before booking and a private tracking code after it. Map, Satellite and Terrain show the last confirmed scan.')}</p>
+        <div class="home-actions">
+          <a class="btn btn-gold" href="#calculator">${icons.calculator()} ${translate(lang, 'hero.calculate', 'Calculate shipping')}</a>
+          <a class="btn btn-ghost" href="#tracking">${icons.search()} ${translate(lang, 'hero.track', 'Track a shipment')}</a>
         </div>
-      </div>
-      <div class="hero-track" id="track">
-        <h2 class="hero-track-title">Track a shipment</h2>
         ${trackForm('', { compact: true, inverse: true })}
       </div>
     </div>
   </section>
 
-  <section class="mode-bar" aria-label="How freight moves">
-    <div class="container">
-      <ul>
-        <li><strong>Parcel</strong><span>Door to door, at home and abroad</span></li>
-        <li><strong>Air</strong><span>Freight when the clock is short</span></li>
-        <li><strong>Ocean</strong><span>Heavier cargo, shared or dedicated</span></li>
-        <li><strong>Road</strong><span>Regional and cross-border freight</span></li>
-      </ul>
-    </div>
-  </section>
+  <div class="home-principles-wrap">
+    <ul class="container home-principles">
+      <li><strong>Written quote</strong><span>The price, the service and the conditions, before anything is booked.</span></li>
+      <li><strong>Private code</strong><span>Issued after booking. Random, stored as a keyed hash, and revocable.</span></li>
+      <li><strong>Three map views</strong><span>Map, Satellite and Terrain, placed on the last confirmed scan.</span></li>
+      <li><strong>Delivery evidence</strong><span>The record is complete only when delivery is recorded with evidence.</span></li>
+    </ul>
+  </div>
 
-  <section class="film-strip" aria-labelledby="ops-title">
+  <section class="home-band home-band-sand" id="operations">
     <div class="container">
-      <div class="section-head">
+      <header class="home-head">
         <p class="eyebrow">Operations</p>
-        <h2 id="ops-title">Air, ocean and road — coordinated from one desk</h2>
-        <p class="lead-sm">These films show the kinds of movements Crownline Express arranges. They are not footage of a named Crownline fleet.</p>
-      </div>
-      <div class="film-grid">
-        <article class="film-card">
-          <a href="/services/air-freight">
-            <img src="/images/service-air-freight-loading.jpg" alt="" width="640" height="400">
-            <video autoplay muted loop playsinline poster="/images/service-air-freight-loading.jpg">
-              <source src="/video/air-freight-operations.mp4" type="video/mp4">
-            </video>
-            <div class="film-caption">
-              <h3>Air freight</h3>
-              <p>Time-critical cargo, quoted before booking</p>
-            </div>
-          </a>
-        </article>
-        <article class="film-card">
-          <a href="/services/ocean-freight">
-            <img src="/images/service-ocean-freight-vessel.jpg" alt="" width="640" height="400">
-            <video autoplay muted loop playsinline poster="/images/service-ocean-freight-vessel.jpg">
-              <source src="/video/ocean-freight-operations.mp4" type="video/mp4">
-            </video>
-            <div class="film-caption">
-              <h3>Ocean freight</h3>
-              <p>Shared and dedicated container moves</p>
-            </div>
-          </a>
-        </article>
-        <article class="film-card">
-          <a href="/services/road-freight">
-            <img src="/images/service-road-freight-highway.jpg" alt="" width="640" height="400">
-            <video autoplay muted loop playsinline poster="/images/service-road-freight-highway.jpg">
-              <source src="/video/road-freight-operations.mp4" type="video/mp4">
-            </video>
-            <div class="film-caption">
-              <h3>Road freight</h3>
-              <p>Domestic and cross-border pallets</p>
-            </div>
-          </a>
-        </article>
+        <h2>Air, ocean and road</h2>
+        <p>The confirmation names the service and the carrier.</p>
+      </header>
+      <div class="home-films">
+        ${film('/video/air-freight-operations.mp4', '/images/ops-air-freight.jpg', 'Air', 'Freight operations')}
+        ${film('/video/ocean-freight-operations.mp4', '/images/ops-ocean-fleet.jpg', 'Ocean', 'Cargo fleet')}
+        ${film('/video/road-freight-operations.mp4', '/images/ops-ground-delivery.jpg', 'Road', 'Express ground delivery')}
       </div>
     </div>
   </section>
 
-  <section class="section section-navy section-tools" aria-labelledby="tools-title">
+  <section class="home-band" id="overview">
     <div class="container">
-      <div class="section-head">
-        <p class="eyebrow eyebrow-gold">Desk tools</p>
-        <h2 id="tools-title">Estimate, then follow the shipment</h2>
+      <header class="home-head">
+        <p class="eyebrow">Overview</p>
+        <h2>A coordinator reads every request</h2>
+        <p>The carrier is named on the confirmation. Milestones appear when they are confirmed.</p>
+      </header>
+      <div class="home-mosaic">
+        ${shot('/images/ops/parcel-floor.jpg', 'Cardboard parcels on a roller conveyor', 'Parcel handling', true)}
+        ${shot('/images/ops/handlers.jpg', 'A person handling cartons in a warehouse aisle', 'Handlers')}
+        ${shot('/images/ops/loading.jpg', 'Containers at a port', 'Loading')}
+        ${shot('/images/ops/distribution.jpg', 'Pallets in a distribution aisle', 'Distribution')}
+        ${shot('/images/ops/handling.jpg', 'Hands closing a carton', 'Packing')}
       </div>
-      <div class="tools-grid">
-        <div class="tool-panel">
-          <h3>Shipping calculator</h3>
-          <p class="small">Billable weight and, where a rate card is loaded, an itemised estimate. A coordinator confirms the price before anything is booked.</p>
-          <a class="btn btn-gold btn-sm" href="/calculator">Open the full calculator</a>
+      <div class="home-split">
+        <div>
+          <h3>One reference. One tracking page.</h3>
+          <p>You get a written record of the service, the price and the conditions. Nothing is booked on a calculator figure alone.</p>
+          <div class="home-rules">
+            <article><span class="home-ico">${icons.document()}</span><div><h3>Quote in writing</h3><p>The price, what it includes, and what it leaves out are sent before you accept.</p></div></article>
+            <article><span class="home-ico">${icons.shield()}</span><div><h3>Cover when it is written</h3><p>Shipment cover applies only when it is on the confirmed quote.</p></div></article>
+            <article><span class="home-ico">${icons.clock()}</span><div><h3>A page you can return to</h3><p>Confirmed milestones stay on the tracking page. Your coordinator replies by email.</p></div></article>
+            <article><span class="home-ico">${icons.check()}</span><div><h3>Delivery with evidence</h3><p>Delivered status needs a proof-of-delivery reference.</p></div></article>
+          </div>
         </div>
-        <div class="tool-panel">
-          <h3>Track a shipment</h3>
-          <p class="small">Enter a Crownline code. The result page shows confirmed milestones and a map with Map, Satellite and Terrain — the last confirmed place, not a live vehicle.</p>
-          ${trackForm('', { compact: true, inverse: true })}
-          <p class="map-styles" aria-hidden="true"><span>Map</span><span>Satellite</span><span>Terrain</span></p>
-        </div>
+        <aside class="home-note">
+          <img src="/images/home/tracking.jpg" alt="" width="900" height="1200">
+          <div class="home-note-body">
+            <p class="eyebrow eyebrow-gold">From code to confirmation</p>
+            <ol>
+              <li><strong>CL</strong><span>Code prefix on every tracking reference</span></li>
+              <li><strong>3</strong><span>Map views: Map, Satellite, Terrain</span></li>
+              <li><strong>1</strong><span>Coordinator on the booking</span></li>
+              <li><strong>Written</strong><span>Confirmation before a carrier is booked</span></li>
+            </ol>
+          </div>
+        </aside>
       </div>
     </div>
   </section>
 
-  <section class="section" aria-labelledby="cap-title">
+  <section class="home-band home-band-white" id="services">
     <div class="container">
-      <div class="section-head">
-        <p class="eyebrow">Institutional controls</p>
-        <h2 id="cap-title">What this platform actually does</h2>
-      </div>
-      <ul class="cap-grid">
-        <li>
-          <h3>Written confirmation</h3>
-          <p>Nothing is booked until a coordinator confirms service, price and conditions in writing.</p>
-        </li>
-        <li>
-          <h3>Private tracking codes</h3>
-          <p>Codes are generated at random, stored as a keyed hash, and can be revoked immediately.</p>
-        </li>
-        <li>
-          <h3>Three map views</h3>
-          <p>Map, satellite and terrain show origin, destination and the last confirmed scan location.</p>
-        </li>
-        <li>
-          <h3>Billable weight</h3>
-          <p>The calculator applies dimensional weight, rounding and limits on the server, never in the browser.</p>
-        </li>
-        <li>
-          <h3>Claims desk</h3>
-          <p>Damage, delay and loss are reported through a dedicated process, not a public comment thread.</p>
-        </li>
-        <li>
-          <h3>Staff operations console</h3>
-          <p>Role-based access, an append-only audit log, and delivery recorded only with evidence.</p>
-        </li>
-      </ul>
-    </div>
-  </section>
-
-  <section class="section section-calc" id="calculate" aria-labelledby="calc-title">
-    <div class="container calc-layout">
-      <div class="calc-intro">
-        <p class="eyebrow">Shipping calculator</p>
-        <h2 id="calc-title">See how your shipment will be priced</h2>
-        <p>Enter the route and the size and weight of your packages. You will see the billable weight, the factors that affect the price and, where pricing is configured, an itemised estimate.</p>
-        ${pricingModeNotice(config)}
-        ${priceFactors()}
-      </div>
-      <div class="card card-raised">
-        ${calculatorForm(calcValues, undefined, { compact: true })}
-      </div>
-    </div>
-  </section>
-
-  <section class="section section-sand" aria-labelledby="services-title">
-    <div class="container">
-      <div class="section-head">
+      <header class="home-head">
         <p class="eyebrow">Services</p>
-        <h2 id="services-title">Shipping options, explained plainly</h2>
-        <p class="lead-sm">Crownline Express coordinates each request with a suitable carrier or transport partner. Every request is reviewed by our team before anything is booked.</p>
+        <h2>${translate(lang, 'svc.heading', 'Each request is reviewed first')}</h2>
+        <p>${translate(lang, 'svc.lead', 'Ocean, air, road, fulfilment, documents and tracking. A coordinator confirms each one in writing.')}</p>
+      </header>
+      <div class="home-services">
+        ${homeService('/services/ocean-freight', icons.ship(), translate(lang, 'svc.ocean.title', 'Ocean freight'), translate(lang, 'svc.ocean.text', 'Shared or dedicated container space for cargo that can travel by sea.'), ['Shared', 'Dedicated', 'Quoted first'], { src: '/images/home/ocean-freight.jpg', alt: 'A container ship at sea' })}
+        ${homeService('/services/air-freight', icons.plane(), translate(lang, 'svc.air.title', 'Air freight'), translate(lang, 'svc.air.text', 'Heavier or urgent cargo moved by air, quoted before it is booked.'), ['Time-critical', 'Named carrier'], { src: '/images/home/air-freight.jpg', alt: 'A freighter in flight' })}
+        ${homeService('/services/road-freight', icons.truck(), translate(lang, 'svc.road.title', 'Road freight'), translate(lang, 'svc.road.text', 'Pallets and part-loads by truck, within a country or across a land border.'), ['Domestic', 'Cross-border'], { src: '/images/home/road-freight.jpg', alt: 'A truck on an open highway' })}
+        ${homeService('/services/fulfillment', icons.warehouse(), translate(lang, 'svc.fulfil.title', 'Shipment coordination & fulfilment'), translate(lang, 'svc.fulfil.text', 'A coordinator arranges storage, packing and dispatch. The confirmation names the facility.'), ['Storage', 'Packing', 'Dispatch'], { src: '/images/home/warehousing.jpg', alt: 'A carton aisle in a warehouse' })}
+        ${homeService('/services/international-parcel-shipping', icons.document(), translate(lang, 'svc.customs.title', 'Customs documents'), translate(lang, 'svc.customs.text', 'We help you prepare the papers the carrier asks for. Clearance is carried out by the carrier or a broker named on the confirmation.'), ['Invoice', 'Named broker'], { src: '/images/home/customs-documents.jpg', alt: 'Papers and a pen on a desk' })}
+        ${homeService('/track', icons.route(), translate(lang, 'svc.track.title', 'Tracking'), translate(lang, 'svc.track.text', 'Map, Satellite and Terrain show the origin, the destination and the last confirmed scan.'), ['Map', 'Satellite', 'Terrain'], { src: '/images/home/tracking.jpg', alt: 'A world map on an office screen' })}
       </div>
-      <div class="service-grid">${SERVICES.map(serviceCard)}</div>
     </div>
   </section>
 
-  <section class="section" aria-labelledby="how-title">
+  <section class="home-band home-band-sand" id="coverage">
     <div class="container">
-      <div class="section-head">
-        <p class="eyebrow">How it works</p>
-        <h2 id="how-title">Three steps from question to delivery</h2>
+      <header class="home-head">
+        <p class="eyebrow">Movement</p>
+        <h2>Where freight is handled</h2>
+        <p>Collection, linehaul, storage and delivery are arranged after you accept the written quote. The confirmation names the carrier and, for fulfilment, the facility.</p>
+      </header>
+      <div class="home-lede">
+        <figure><img src="/images/ops/parcel-floor.jpg" alt="A parcel conveyor in a distribution building" width="1400" height="800"></figure>
+        <div class="home-lede-copy">
+          <h3>Fulfilment is coordinated, then confirmed</h3>
+          <p>Storage, packing and dispatch are booked only after a coordinator confirms the facility and the price in writing.</p>
+        </div>
       </div>
-      <ol class="steps-3 steps-4">
-        <li>
-          <span class="step-num">1</span>
-          <h3>Request a quote</h3>
-          <p>Use the calculator or send a quote request. Prices are confirmed in writing before anything is booked.</p>
-        </li>
-        <li>
-          <span class="step-num">2</span>
-          <h3>Confirm and collect</h3>
-          <p>A coordinator confirms the service and conditions. Collection is arranged with the selected carrier or partner.</p>
-        </li>
-        <li>
-          <span class="step-num">3</span>
-          <h3>Follow confirmed updates</h3>
-          <p>You receive a private tracking code. Map, satellite and terrain show the last confirmed place.</p>
-        </li>
-        <li>
-          <span class="step-num">4</span>
-          <h3>Delivery with evidence</h3>
-          <p>The shipment reaches 100% only when delivery is recorded with evidence. Claims follow a dedicated process.</p>
-        </li>
-      </ol>
-      <p class="center"><a class="link-arrow" href="/how-it-works">The full shipping process, step by step ${icons.arrowRight()}</a></p>
-    </div>
-  </section>
-
-  <section class="section section-navy" aria-labelledby="visibility-title">
-    <div class="container split">
-      <div>
-        <p class="eyebrow eyebrow-gold">Shipment visibility</p>
-        <h2 id="visibility-title">Clear updates, honestly labelled</h2>
-        <ul class="feature-list">
-          <li>${icons.check()} <span><strong>Confirmed milestones only.</strong> We never show a shipment as collected, cleared or delivered unless that event has been confirmed.</span></li>
-          <li>${icons.check()} <span><strong>Progress that means something.</strong> The percentage follows real milestones, not a guess about distance.</span></li>
-          <li>${icons.check()} <span><strong>Issues explained.</strong> Delays, customs holds and address problems are shown separately, with what happens next.</span></li>
-          <li>${icons.check()} <span><strong>Private by design.</strong> Tracking pages never show full addresses, phone numbers or the value of the goods.</span></li>
-          <li>${icons.bell()} <span><strong>A page you can return to.</strong> Confirmed milestones stay on the tracking page. Your coordinator sends any email updates.</span></li>
-        </ul>
-      </div>
-      ${trackingPreview()}
-    </div>
-  </section>
-
-  <section class="section" aria-labelledby="business-title">
-    <div class="container split split-media">
-      <figure class="media-frame">
-        ${picture({ src: '/images/service-business-shipping-packing.jpg', alt: 'A small-business owner carefully packing a ceramic cup into a shipping box.', width: 1152, height: 864 })}
-      </figure>
-      <div>
-        <p class="eyebrow">Business shipping</p>
-        <h2 id="business-title">One coordinator for your recurring shipments</h2>
-        <p>If you ship regularly, Crownline Express can act as your single point of contact across parcel, freight and international services, with one reference system and one tracking page format for every shipment.</p>
-        <ul class="list-check">
-          <li>${icons.check()} A coordinator who reviews your shipping profile</li>
-          <li>${icons.check()} Written pricing and service terms before you ship</li>
-          <li>${icons.check()} Consistent tracking codes and shipment summaries</li>
-        </ul>
-        <p class="small muted">Business accounts, bulk upload and an API are not part of this service yet.</p>
-        <a class="btn btn-primary" href="/quote?service=business_shipping">Request a business quote</a>
+      <div class="home-coverage">
+        <article class="home-photo"><img src="/images/ops/handlers.jpg" alt="A handler with cartons" width="1400" height="900"><div><h3>Collection</h3><p>Arranged with the carrier after you accept the written quote.</p></div></article>
+        <article class="home-photo"><img src="/images/ops/loading.jpg" alt="Containers being loaded" width="1400" height="900"><div><h3>Linehaul</h3><p>Air, ocean or road, as written on the confirmation.</p></div></article>
+        <article class="home-photo"><img src="/images/ops/distribution.jpg" alt="Pallets ready for dispatch" width="1400" height="900"><div><h3>Delivery</h3><p>Recorded when evidence is on the tracking page.</p></div></article>
       </div>
     </div>
   </section>
 
-  <section class="section section-sand" aria-labelledby="faq-title">
-    <div class="container narrow">
-      <div class="section-head">
+  <section class="home-band" id="calculator">
+    <div class="container">
+      <header class="home-head">
+        <p class="eyebrow">Calculator</p>
+        <h2>Shipping calculator</h2>
+        <p>Billable weight, and an itemised estimate where a rate card is loaded. A coordinator confirms the price in writing.</p>
+      </header>
+      <div class="home-tools">
+        <div>
+          ${priceFactors()}
+        </div>
+        <div class="home-panel calc-instrument">${calculatorForm(calcValues, undefined, { compact: true, lang })}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-band home-band-white" id="tracking">
+    <div class="container">
+      <header class="home-head">
+        <p class="eyebrow">Tracking</p>
+        <h2>Follow a shipment</h2>
+        <p>Map, Satellite and Terrain show the last confirmed place. There is no live vehicle feed.</p>
+      </header>
+      <div class="home-panel home-track">
+        ${trackForm('')}
+        <ul class="home-views" aria-label="Map views"><li>Map</li><li>Satellite</li><li>Terrain</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-band home-band-sand" id="record">
+    <div class="container">
+      <header class="home-head">
+        <p class="eyebrow">Record</p>
+        <h2>The record a customer sees</h2>
+        <p>Status, progress, and the three milestones. There are no live counters.</p>
+      </header>
+      <div class="home-track">${trackingPreview()}</div>
+    </div>
+  </section>
+
+  <section class="home-band" id="why">
+    <div class="container">
+      <header class="home-head">
+        <p class="eyebrow">Reliance</p>
+        <h2>Why the record can be trusted</h2>
+        <p>The price you accept is the one a coordinator sends in writing. The tracking code is private. Delivery is recorded with evidence.</p>
+      </header>
+      <div class="home-services">
+        <article class="home-card"><span class="home-ico">${icons.document()}</span><h3>Written price</h3><p>Nothing is booked on the calculator figure alone.</p></article>
+        <article class="home-card"><span class="home-ico">${icons.shield()}</span><h3>Private code</h3><p>The code is random, stored as a keyed hash, and can be revoked.</p></article>
+        <article class="home-card"><span class="home-ico">${icons.check()}</span><h3>Delivery with evidence</h3><p>A proof of delivery is required before the shipment is marked delivered.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-band home-band-white" id="standards">
+    <div class="container">
+      <header class="home-head">
+        <p class="eyebrow">Standards</p>
+        <h2>How the platform is run</h2>
+        <p>Operating rules for quotes, tracking and staff access.</p>
+      </header>
+      <div class="home-quad">
+        <article class="home-card"><span class="home-ico">${icons.document()}</span><h3>Written confirmation</h3><p>Service, price and conditions before booking.</p></article>
+        <article class="home-card"><span class="home-ico">${icons.shield()}</span><h3>Private tracking codes</h3><p>Hashed. No address or goods value on the public page.</p></article>
+        <article class="home-card"><span class="home-ico">${icons.check()}</span><h3>Staff audit log</h3><p>Operational actions are appended.</p></article>
+        <article class="home-card"><span class="home-ico">${icons.clock()}</span><h3>Delivery evidence</h3><p>Delivered status needs a proof-of-delivery reference.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-band home-band-sand" id="checks">
+    <div class="container">
+      <header class="home-head">
+        <p class="eyebrow">Records</p>
+        <h2>What you can check</h2>
+        <p>Four records on your shipment. Not a list of client quotes.</p>
+      </header>
+      <div class="home-quad">
+        <article class="home-card"><h3>The written quote</h3><p>Service, price and conditions, sent before you book.</p></article>
+        <article class="home-card"><h3>The carrier name</h3><p>The company moving that shipment, on the confirmation.</p></article>
+        <article class="home-card"><h3>The tracking timeline</h3><p>Confirmed milestones, with the time and place of the last scan.</p></article>
+        <article class="home-card"><h3>The claims path</h3><p>How to report damage, delay or loss, and what evidence to keep.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-band" id="carriers">
+    <div class="container">
+      <header class="home-head">
+        <p class="eyebrow">Carriage</p>
+        <h2>Who moves the freight</h2>
+        <p>The carrier is identified in writing when the booking is confirmed.</p>
+      </header>
+      <div class="home-quad">
+        <article class="home-card"><span class="home-ico">${icons.parcel()}</span><h3>Collection</h3><p>The pickup party named for that booking.</p></article>
+        <article class="home-card"><span class="home-ico">${icons.ship()}</span><h3>Linehaul</h3><p>The air, ocean or road carrier for the main leg.</p></article>
+        <article class="home-card"><span class="home-ico">${icons.document()}</span><h3>Documents</h3><p>The papers the carrier needs, prepared with you.</p></article>
+        <article class="home-card"><span class="home-ico">${icons.truck()}</span><h3>Delivery</h3><p>The final handoff, recorded when evidence is on file.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-band home-band-white" id="reach">
+    <div class="container">
+      <header class="home-head">
+        <p class="eyebrow">Routes</p>
+        <h2>Quoted to a real country pair</h2>
+        <p>Each route is priced for the countries you enter.</p>
+      </header>
+      <div class="home-quad">
+        <article class="home-card"><span class="home-ico">${icons.parcel()}</span><h3>Parcel</h3><p>Boxes and documents, domestic or international.</p></article>
+        <article class="home-card"><span class="home-ico">${icons.plane()}</span><h3>Air</h3><p>When the transit time is short.</p></article>
+        <article class="home-card"><span class="home-ico">${icons.ship()}</span><h3>Ocean</h3><p>Heavier consignments that can travel by sea.</p></article>
+        <article class="home-card"><span class="home-ico">${icons.truck()}</span><h3>Road</h3><p>Pallets by truck, including across a land border.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-band home-band-sand" id="how">
+    <div class="container">
+      <header class="home-head">
+        <p class="eyebrow">Process</p>
+        <h2>How it works</h2>
+        <p>From the quote to delivery with evidence.</p>
+      </header>
+      <div class="home-steps">
+        <article class="home-step"><span class="home-step-num">01</span><h3>Request a quote</h3><p>Use the calculator or send a quote request. The price is confirmed in writing before anything is booked.</p></article>
+        <article class="home-step"><span class="home-step-num">02</span><h3>Confirm and collect</h3><p>A coordinator confirms the service, the carrier and the conditions. Collection follows your acceptance.</p></article>
+        <article class="home-step"><span class="home-step-num">03</span><h3>Follow confirmed updates</h3><p>You receive a private tracking code. Map, Satellite and Terrain show the last confirmed place.</p></article>
+        <article class="home-step"><span class="home-step-num">04</span><h3>Delivery with evidence</h3><p>The shipment is marked delivered only when delivery is recorded with evidence.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-band" id="faq">
+    <div class="container">
+      <header class="home-head">
         <p class="eyebrow">Questions</p>
-        <h2 id="faq-title">Frequently asked questions</h2>
-      </div>
+        <h2>Frequently asked questions</h2>
+        <p>Tracking, transit, documents and cover.</p>
+      </header>
       <div class="faq">
-        ${FAQ_ITEMS.slice(0, 5).map((f) => html`<details><summary>${f.q}</summary><div class="faq-a">${f.a}</div></details>`)}
+        ${FAQ_ITEMS.slice(0, 6).map((f) => html`<details><summary>${f.q}</summary><div class="faq-a">${f.a}</div></details>`)}
       </div>
-      <p class="center"><a class="link-arrow" href="/faq">All questions ${icons.arrowRight()}</a></p>
+      <p class="center"><a href="/faq">All questions</a></p>
     </div>
   </section>
 
-  <section class="section" aria-labelledby="contact-title">
-    <div class="container contact-band">
-      <div>
-        <h2 id="contact-title">Talk to a coordinator</h2>
-        <p>Tell us what you need to move. We will reply by email with options, or with the questions we need answered to quote accurately.</p>
-      </div>
-      <div class="contact-actions">
-        <a class="btn btn-primary" href="/contact">${icons.mail()} Send a message</a>
-        <a class="btn btn-ghost" href="/quote">Request a quote</a>
+  <section class="home-band home-band-white" id="contact">
+    <div class="container">
+      <header class="home-head">
+        <p class="eyebrow">Contact</p>
+        <h2>Talk to a coordinator</h2>
+        <p>Send a message. A coordinator replies by email. There is no published phone number or office address.</p>
+      </header>
+      <div class="home-quad">
+        <a class="home-card" href="/contact"><span class="home-ico">${icons.mail()}</span><h3>Send a message</h3><p>The contact form is the way to reach a coordinator.</p></a>
+        <a class="home-card" href="/quote"><span class="home-ico">${icons.document()}</span><h3>Request a quote</h3><p>Describe the shipment. The price comes back in writing.</p></a>
+        <a class="home-card" href="/track"><span class="home-ico">${icons.search()}</span><h3>Track a shipment</h3><p>Use the private code from your booking confirmation.</p></a>
+        <a class="home-card" href="/claims"><span class="home-ico">${icons.alert()}</span><h3>Claims</h3><p>Report damage, delay or loss and keep the evidence.</p></a>
       </div>
     </div>
-  </section>`;
+  </section>
+  </div>`;
 }

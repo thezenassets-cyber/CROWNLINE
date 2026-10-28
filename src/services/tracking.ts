@@ -4,11 +4,12 @@ import { countryName } from '../domain/countries.ts';
 import { locateLabel, type GeoPoint } from '../domain/geo.ts';
 import { EXCEPTION_CATEGORIES, EVENT_SOURCES, INFO_EVENT_TYPES, SYSTEM_EVENT_TYPES, type ExceptionCategory, type EventSource } from '../domain/events.ts';
 import { can } from '../domain/permissions.ts';
-import { milestoneSteps, type MilestoneDefinition, type MilestoneStep } from '../domain/progress.ts';
+import { customerProgress, milestoneSteps, type MilestoneDefinition, type MilestoneStep } from '../domain/progress.ts';
 import { findServiceByCode } from '../config/services.ts';
 import { ConflictError, ForbiddenError, NotFoundError } from '../lib/errors.ts';
 import { hoursSince } from '../lib/time.ts';
 import { recordAudit } from './audit.ts';
+import { listCharges, toPublicCharges, type PublicCharge } from './charges.ts';
 import { loadMilestones } from './milestones.ts';
 import type { StaffActor } from './shipments.ts';
 
@@ -95,11 +96,16 @@ export interface PublicTrackingView {
   lifecycleState: 'active' | 'cancelled';
   status: { label: string; explanation: string; customerAction: string | null };
   progressPercent: number;
+  progressSource: 'milestone' | 'coordinator';
+  statusCode: string;
+  revision: string;
+  charges: PublicCharge[];
   steps: MilestoneStep[];
   timeline: PublicTimelineEntry[];
   latestEvent: PublicTimelineEntry | null;
   openExceptions: { label: string; message: string; since: Date }[];
   estimatedDelivery: { date: string; source: 'carrier' | 'staff_estimate' } | null;
+  coverIncluded: boolean;
   deliveredAt: Date | null;
   lastEventAt: Date | null;
   isStale: boolean;
@@ -135,12 +141,12 @@ export async function lookupTracking(q: Queryable, input: string, secret: string
     await q.query<{
       id: string; service_code: string; shipment_type: string; origin_city: string; origin_country: string;
       destination_city: string; destination_country: string; lifecycle_state: 'active' | 'cancelled';
-      current_milestone: string | null; progress_percent: number; last_event_at: Date | null; delivered_at: Date | null;
-      estimated_delivery_date: string | null; estimated_delivery_source: 'carrier' | 'staff_estimate' | null; code_hint: string;
+      current_milestone: string | null; progress_percent: number; display_progress: number | null; last_event_at: Date | null; delivered_at: Date | null;
+      estimated_delivery_date: string | null; estimated_delivery_source: 'carrier' | 'staff_estimate' | null; cover_included: boolean; code_hint: string; updated_at: Date;
     }>(
       `select s.id, s.service_code, s.shipment_type, s.origin_city, s.origin_country, s.destination_city, s.destination_country,
-              s.lifecycle_state, s.current_milestone, s.progress_percent, s.last_event_at, s.delivered_at,
-              s.estimated_delivery_date::text as estimated_delivery_date, s.estimated_delivery_source, c.code_hint
+              s.lifecycle_state, s.current_milestone, s.progress_percent, s.display_progress, s.last_event_at, s.delivered_at, s.updated_at,
+              s.estimated_delivery_date::text as estimated_delivery_date, s.estimated_delivery_source, s.cover_included, c.code_hint
        from tracking_credentials c join shipments s on s.id = c.shipment_id
        where c.code_hash = $1 and c.revoked_at is null and (c.expires_at is null or c.expires_at > $2)
          and s.lifecycle_state in ('active', 'cancelled')`,
@@ -149,7 +155,7 @@ export async function lookupTracking(q: Queryable, input: string, secret: string
   ).rows[0];
   if (!s) return { status: 'not_found' };
 
-  const [defs, events, exceptions] = await Promise.all([
+  const [defs, events, exceptions, charges] = await Promise.all([
     loadMilestones(q),
     q.query<{
       event_type: string; category: 'milestone' | 'exception' | 'info'; milestone_code: string | null; occurred_at: Date;
@@ -163,16 +169,17 @@ export async function lookupTracking(q: Queryable, input: string, secret: string
       `select category, customer_message, opened_at from shipment_exceptions where shipment_id = $1 and resolved_at is null order by opened_at`,
       [s.id],
     ),
+    listCharges(q, s.id, { publicOnly: true }),
   ]);
 
-  return { status: 'found', view: buildView(s, defs, events.rows, exceptions.rows, now) };
+  return { status: 'found', view: buildView(s, defs, events.rows, exceptions.rows, toPublicCharges(charges), now) };
 }
 
 function buildView(
   s: {
     service_code: string; shipment_type: string; origin_city: string; origin_country: string; destination_city: string; destination_country: string;
-    lifecycle_state: 'active' | 'cancelled'; current_milestone: string | null; progress_percent: number; last_event_at: Date | null;
-    delivered_at: Date | null; estimated_delivery_date: string | null; estimated_delivery_source: 'carrier' | 'staff_estimate' | null; code_hint: string;
+    lifecycle_state: 'active' | 'cancelled'; current_milestone: string | null; progress_percent: number; display_progress: number | null; last_event_at: Date | null; updated_at: Date;
+    delivered_at: Date | null; estimated_delivery_date: string | null; estimated_delivery_source: 'carrier' | 'staff_estimate' | null; cover_included: boolean; code_hint: string;
   },
   defs: MilestoneDefinition[],
   events: {
@@ -180,6 +187,7 @@ function buildView(
     occurred_timezone: string | null; location_label: string | null; location_country: string | null; public_note: string | null; source: EventSource;
   }[],
   exceptions: { category: ExceptionCategory; customer_message: string; opened_at: Date }[],
+  charges: PublicCharge[],
   now: Date,
 ): PublicTrackingView {
   const isInternational = s.origin_country !== s.destination_country;
@@ -208,6 +216,13 @@ function buildView(
     };
   });
 
+  const milestonePercent = Number(s.progress_percent);
+  const displayRaw = s.display_progress == null ? null : Number(s.display_progress);
+  const shown = customerProgress(
+    Number.isFinite(milestonePercent) ? milestonePercent : 0,
+    displayRaw !== null && Number.isFinite(displayRaw) ? displayRaw : null,
+    s.delivered_at !== null,
+  );
   const current = s.current_milestone ? defByCode.get(s.current_milestone) : undefined;
   const status =
     s.lifecycle_state === 'cancelled'
@@ -243,7 +258,11 @@ function buildView(
     isInternational,
     lifecycleState: s.lifecycle_state,
     status,
-    progressPercent: s.progress_percent,
+    progressPercent: shown.percent,
+    progressSource: shown.source,
+    statusCode: s.lifecycle_state === 'cancelled' ? 'cancelled' : (s.current_milestone ?? 'awaiting'),
+    revision: [new Date(s.updated_at).toISOString(), String(shown.percent), s.cover_included ? 'cover' : 'nocover', timeline[0]?.occurredAt.toISOString() ?? '', charges.map((c) => `${c.description}:${c.amountLabel}:${c.status}`).join('|')].join('~'),
+    charges,
     steps,
     timeline,
     latestEvent: timeline[0] ?? null,
@@ -252,6 +271,7 @@ function buildView(
       s.estimated_delivery_date && s.estimated_delivery_source && !s.delivered_at && s.lifecycle_state === 'active'
         ? { date: s.estimated_delivery_date, source: s.estimated_delivery_source }
         : null,
+    coverIncluded: s.cover_included === true,
     deliveredAt: s.delivered_at ? new Date(s.delivered_at) : null,
     lastEventAt,
     isStale,

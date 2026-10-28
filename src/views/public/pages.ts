@@ -13,7 +13,8 @@ import { icons } from '../icons.ts';
 import { calculatorDefaults, calculatorForm, estimateResultView, pricingModeNotice, priceFactors } from './calculator.ts';
 import { FAQ_ITEMS, PROCESS_STAGES, LEGAL_DRAFT_NOTICE, TERMS_SECTIONS, PRIVACY_SECTIONS, COOKIE_SECTIONS } from './content.ts';
 import { serviceCard } from './home.ts';
-import { trackForm, trackingResultView } from './track.ts';
+import { translate, type Lang } from '../../i18n/index.ts';
+import { trackForm, trackingMap, trackingResultView } from './track.ts';
 
 function pageHead(eyebrow: string, title: string, lead?: string, image?: { src: string; alt: string }): SafeHtml {
   return html`<section class="page-head ${image ? 'page-head-image' : ''}">
@@ -28,18 +29,21 @@ function pageHead(eyebrow: string, title: string, lead?: string, image?: { src: 
 
 export function servicesIndexPage(): SafeHtml {
   return html`${pageHead('Services', 'Shipping services', 'Each service below explains what it is, who it suits, how it works and what we need from you. Every request is reviewed by our team before booking.')}
-  <section class="section"><div class="container"><div class="service-grid">${SERVICES.map(serviceCard)}</div></div></section>`;
+  <section class="section"><div class="container"><div class="home-services">${SERVICES.map(serviceCard)}</div></div></section>`;
 }
 
-export function serviceDetailPage(s: ServiceDefinition): SafeHtml {
+export function serviceDetailPage(s: ServiceDefinition, lang: Lang = 'en'): SafeHtml {
   const planned = s.availability === 'planned';
-  return html`${pageHead(s.name, s.page.headline, s.shortDescription, { src: s.image.src, alt: s.image.alt })}
+  const headline = translate(lang, `svc.${s.code}.headline`, s.page.headline);
+  const lead = translate(lang, `svc.${s.code}.short`, s.shortDescription);
+  const what = translate(lang, `svc.${s.code}.what`, s.page.whatItIs);
+  return html`${pageHead(s.name, headline, lead, { src: s.image.src, alt: s.image.alt })}
   <section class="section">
     <div class="container content-grid">
       <article class="prose">
         ${planned ? notice('warning', 'Not currently offered', 'Crownline Express is not accepting bookings for this service.') : ''}
         <h2>What it is</h2>
-        <p>${s.page.whatItIs}</p>
+        <p>${what}</p>
         <h2>Who it suits</h2>
         <ul>${s.page.whoItSuits.map((w) => html`<li>${w}</li>`)}</ul>
         <h2>How it works</h2>
@@ -65,36 +69,52 @@ export function serviceDetailPage(s: ServiceDefinition): SafeHtml {
   </section>`;
 }
 
-export function calculatorPage(config: AppConfig, values: Values, errors: FieldErrors | undefined, result: EstimateResult | null): SafeHtml {
-  return html`${pageHead('Shipping calculator', 'Estimate your shipment', 'Billable weight, pricing factors and, where pricing is configured, an itemised estimate.', { src: '/images/page-calculator.jpg', alt: '' })}
-  <section class="section">
+export function calculatorPage(config: AppConfig, values: Values, errors: FieldErrors | undefined, result: EstimateResult | null, lang: Lang = 'en'): SafeHtml {
+  return html`${pageHead('Shipping calculator', 'Estimate your shipment', 'Weight, size and an estimated straight-line distance. A coordinator confirms the price in writing.', { src: '/images/page-calculator.jpg', alt: '' })}
+  <section class="section calc-stage">
     <div class="container calc-page">
       <div>
         ${pricingModeNotice(config)}
-        <div class="card">${calculatorForm(values, errors)}</div>
+        <div class="card">${calculatorForm(values, errors, { lang })}</div>
       </div>
       <div>
-        ${result ? estimateResultView(result, calculatorDefaults(values)) : priceFactors()}
+        ${result ? estimateResultView(result, calculatorDefaults(values), lang) : priceFactors()}
       </div>
     </div>
   </section>`;
 }
 
-export function trackPage(code: string, outcome: { error?: string | undefined; view?: PublicTrackingView | undefined }): SafeHtml {
-  return html`${pageHead('Tracking', 'Track a shipment', 'Enter your Crownline tracking code to see confirmed milestones.', { src: '/images/page-tracking.jpg', alt: '' })}
+export function trackPage(code: string, outcome: { error?: string | undefined; view?: PublicTrackingView | undefined }, lang: Lang = 'en'): SafeHtml {
+  const mapData = outcome.view
+    ? { origin: outcome.view.places.origin, destination: outcome.view.places.destination, current: outcome.view.places.current }
+    : {};
+  const mapLabel = outcome.view
+    ? 'Map of the booked route and last confirmed location'
+    : 'World map. Map, Satellite and Terrain.';
+  return html`<section class="track-stage">
+    ${trackingMap(mapData, mapLabel)}
+    <div class="track-stage-panel">
+      <div class="card">
+        <p class="eyebrow">Tracking</p>
+        <h1>${translate(lang, 'track.h1', 'Track a shipment')}</h1>
+        <p class="lead">${translate(lang, 'track.lead', 'Enter your Crownline tracking code to see confirmed milestones.')}</p>
+        ${trackForm(code, { error: outcome.error })}
+      </div>
+    </div>
+  </section>
+  <script src="/js/map.js" defer></script>
   <section class="section">
     <div class="container">
-      <div class="card track-card">${trackForm(code, { error: outcome.error })}</div>
-      ${outcome.view ? trackingResultView(outcome.view) : html`<div class="help-grid">
-        <div class="card"><h2 class="h4">${icons.info()} Where is my code?</h2><p class="small">It starts with CL and is in the booking confirmation from your coordinator.</p></div>
-        <div class="card"><h2 class="h4">${icons.shield()} Private by design</h2><p class="small">Tracking shows the route at city level and confirmed events. It never shows full addresses, phone numbers or values.</p></div>
-        <div class="card"><h2 class="h4">${icons.mail()} Need help?</h2><p class="small">If your code does not work, <a href="/contact?topic=tracking">contact us</a> with your shipment reference.</p></div>
+      ${outcome.view ? trackingResultView(outcome.view, code, lang) : html`<div class="help-grid">
+        <div class="card"><h2 class="h4">${icons.info()} ${translate(lang, 'track.where', 'Where is my code?')}</h2><p class="small">${translate(lang, 'track.whereBody', 'It starts with CL and is in the booking confirmation from your coordinator.')}</p></div>
+        <div class="card"><h2 class="h4">${icons.shield()} ${translate(lang, 'track.private', 'Private by design')}</h2><p class="small">${translate(lang, 'track.privateBody', 'Tracking shows the route at city level and confirmed events. It never shows full addresses, phone numbers or values.')}</p></div>
+        <div class="card"><h2 class="h4">${icons.mail()} ${translate(lang, 'track.helpTitle', 'Need help?')}</h2><p class="small">${translate(lang, 'track.helpBody', 'If your code does not work, contact us with your shipment reference.')} <a href="/contact?topic=tracking">${translate(lang, 'nav.contact', 'Contact')}</a></p></div>
       </div>`}
     </div>
   </section>`;
 }
 
-export function quotePage(config: AppConfig, values: Values, errors: FieldErrors | undefined, idempotencyKey: string): SafeHtml {
+export function quotePage(config: AppConfig, values: Values, errors: FieldErrors | undefined, idempotencyKey: string, lang: Lang = 'en'): SafeHtml {
   const v = calculatorDefaults(values);
   const options = SERVICES.filter((s) => s.availability === 'quote_on_request').map((s) => ({ value: s.code, label: s.name }));
   const types = [
@@ -141,10 +161,7 @@ export function quotePage(config: AppConfig, values: Values, errors: FieldErrors
             ${textField({ name: 'width', label: 'Width', values: v, errors, type: 'number', inputmode: 'decimal', step: 'any', required: true })}
             ${textField({ name: 'height', label: 'Height', values: v, errors, type: 'number', inputmode: 'decimal', step: 'any', required: true })}
           </div>
-          <div class="grid-2">
-            ${textField({ name: 'declaredValue', label: 'Value of the goods', values: v, errors, type: 'number', inputmode: 'decimal', step: 'any' })}
-            ${checkboxField({ name: 'insurance', label: 'I am interested in optional shipment cover', checked: v.insurance === 'on', errors })}
-          </div>
+          <p class="small muted">${translate(lang, 'calc.valueNote', 'Declared value and shipment cover are recorded by your coordinator when the shipment is created.')}</p>
           ${textArea({ name: 'notes', label: 'Anything else we should know?', values: v, errors, hint: 'For example the goods, delivery windows, or several different package sizes.', maxlength: 2000 })}
         </fieldset>
         ${checkboxField({ name: 'consent', label: 'Crownline may contact me by email about this request.', errors, required: true, checked: v.consent === 'on' })}

@@ -30,8 +30,8 @@ export const icons = {
   handshake: () => svg('<path d="m3 12 3.5-3.5 4 1.5 2.5-2 3 .5L21 12"/><path d="m6.5 8.5 4.5 7a1.6 1.6 0 0 0 2.5.2l3.5-3.7M10 14l2 2M12.5 12.5l2 2"/>'),
 } satisfies Record<string, () => SafeHtml>;
 
-export function crownlineMark(size = 36): SafeHtml {
+export function crownlineMark(size = 44): SafeHtml {
   return raw(
-    `<svg class="brand-mark" width="${size}" height="${size}" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><rect width="48" height="48" rx="8" fill="#0b1629"/><path d="M9 34V18.5l7.2 6.2L24 12l7.8 12.7L39 18.5V34z" fill="#f4efe6"/><path d="M12 34h24" stroke="#c4a15a" stroke-width="2.4" stroke-linecap="round"/><circle cx="24" cy="10.2" r="1.7" fill="#c4a15a"/></svg>`,
+    `<svg class="brand-mark" width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><rect x="1.6" y="1.6" width="60.8" height="60.8" rx="16" fill="#0c1730" stroke="#d7b56a" stroke-width="2.4"/><path fill="#f6e7c4" d="M15.2 44.6 18.6 29.4 26.4 36.8 32 22.2 37.6 36.8 45.4 29.4 48.8 44.6z"/><circle cx="18.6" cy="26.6" r="3.15" fill="#f6e7c4"/><circle cx="32" cy="19.2" r="3.45" fill="#f6e7c4"/><circle cx="45.4" cy="26.6" r="3.15" fill="#f6e7c4"/><rect x="14" y="47.4" width="36" height="4.1" rx="1.35" fill="#d7b56a"/></svg>`,
   );
 }

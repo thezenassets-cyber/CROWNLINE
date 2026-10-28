@@ -44,7 +44,23 @@ test('shipment creation is permission-checked, idempotent and records booking', 
   assert.equal(detail.shipment.declared_value_minor, 25000);
 
   await assert.rejects(createShipment(db, ops, shipmentForm({ serviceCode: 'domestic_parcel' })), ValidationError);
-  await assert.rejects(createShipment(db, ops, shipmentForm({ serviceCode: 'fulfillment' })), ValidationError);
+
+  const fulfilled = await createShipment(db, ops, shipmentForm({ serviceCode: 'fulfillment', coverIncluded: true }));
+  assert.equal(fulfilled.created, true);
+  const fulfilment = await getShipmentDetail(db, fulfilled.id);
+  assert.equal(fulfilment.shipment.cover_included, true);
+  assert.equal(fulfilment.shipment.distance_source, 'estimated');
+  assert.ok(Number(fulfilment.shipment.distance_km) > 5000);
+
+  const overridden = await createShipment(db, ops, shipmentForm({ distanceKm: 1200 }));
+  const measured = await getShipmentDetail(db, overridden.id);
+  assert.equal(Number(measured.shipment.distance_km), 1200);
+  assert.equal(measured.shipment.distance_source, 'coordinator');
+  assert.equal(measured.shipment.cover_included, false);
+  await assert.rejects(
+    createShipment(db, ops, shipmentForm({ coverIncluded: true, declaredValue: undefined })),
+    ValidationError,
+  );
 });
 
 test('tracking lifecycle: issue, look up, add events, dedupe, revoke', async () => {

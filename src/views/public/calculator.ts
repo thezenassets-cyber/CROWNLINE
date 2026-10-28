@@ -1,4 +1,5 @@
 import { html, type SafeHtml } from '../../lib/html.ts';
+import { translate, type Lang } from '../../i18n/index.ts';
 import type { AppConfig } from '../../config/env.ts';
 import { SERVICES } from '../../config/services.ts';
 import { formatMoney } from '../../domain/money.ts';
@@ -6,7 +7,7 @@ import { countryName } from '../../domain/countries.ts';
 import type { EstimateResult } from '../../domain/pricing.ts';
 import { fromKg } from '../../domain/units.ts';
 import type { FieldErrors } from '../../validation/schemas.ts';
-import { checkboxField, countrySelect, errorSummary, notice, selectField, textField, type Values } from '../components.ts';
+import { countrySelect, errorSummary, notice, selectField, textField, type Values } from '../components.ts';
 import { icons } from '../icons.ts';
 
 export const CALCULATOR_FIELDS = [
@@ -28,29 +29,28 @@ export function calculatorDefaults(v: Values): Values {
 }
 
 export function pricingModeNotice(config: AppConfig): SafeHtml {
-  if (config.pricingMode === 'demo') {
-    return notice('demo', 'Demonstration pricing', 'Prices from this calculator are sample figures used to demonstrate how estimates work. They are not carrier rates and not a quote. Request a quote for a confirmed price.');
-  }
+  if (config.pricingMode === 'demo') return html``;
   if (config.pricingMode === 'disabled') {
     return notice('info', 'Online prices are not available yet', 'The calculator shows how your shipment will be measured for pricing (its billable weight). Request a quote and our team will confirm the price.');
   }
   return notice('info', 'Estimate from Crownline’s published rate card', 'Final prices are confirmed after our team reviews your shipment details.');
 }
 
-export function calculatorForm(values: Values, errors: FieldErrors | undefined, opts: { compact?: boolean; action?: string } = {}): SafeHtml {
+export function calculatorForm(values: Values, errors: FieldErrors | undefined, opts: { compact?: boolean; action?: string; lang?: Lang } = {}): SafeHtml {
+  const lang = opts.lang ?? 'en';
   const v = calculatorDefaults(values);
   const serviceOptions = PRICED_SERVICES.map((s) => ({ value: s.code, label: s.name }));
   return html`<form class="calc-form ${opts.compact ? 'calc-compact' : ''}" method="get" action="${opts.action ?? '/calculator'}#result" novalidate>
     ${errorSummary(errors)}
     <fieldset class="fieldset">
-      <legend>Service</legend>
+      <legend>${translate(lang, 'calc.service', 'Service')}</legend>
       <div class="grid-2">
         ${selectField({ name: 'service', label: 'Service', values: v, errors, options: serviceOptions, required: true })}
         ${selectField({ name: 'shipmentType', label: 'What are you sending?', values: v, errors, options: TYPE_OPTIONS, required: true })}
       </div>
     </fieldset>
     <fieldset class="fieldset">
-      <legend>Route</legend>
+      <legend>${translate(lang, 'calc.route', 'Route')}</legend>
       <div class="grid-2">
         ${countrySelect({ name: 'originCountry', label: 'From (country)', values: v, errors, required: true, autocomplete: 'section-origin country' })}
         ${countrySelect({ name: 'destinationCountry', label: 'To (country)', values: v, errors, required: true, autocomplete: 'section-destination country' })}
@@ -62,32 +62,24 @@ export function calculatorForm(values: Values, errors: FieldErrors | undefined, 
       </div>
     </fieldset>
     <fieldset class="fieldset">
-      <legend>Packages</legend>
+      <legend>${translate(lang, 'calc.packages', 'Packages')}</legend>
       <p class="hint">Enter the size and weight of one package. If you have several identical packages, set the quantity.</p>
       <div class="grid-4">
         ${textField({ name: 'quantity', label: 'Quantity', values: v, errors, type: 'number', inputmode: 'numeric', min: '1', max: '99', step: '1', required: true })}
-        ${textField({ name: 'weight', label: 'Weight each', values: v, errors, type: 'number', inputmode: 'decimal', min: '0', step: 'any', required: true })}
+        ${textField({ name: 'weight', label: translate(lang, 'calc.weight', 'Weight each'), values: v, errors, type: 'number', inputmode: 'decimal', min: '0', step: 'any', required: true })}
         ${selectField({ name: 'weightUnit', label: 'Weight unit', values: v, errors, options: [{ value: 'kg', label: 'kilograms (kg)' }, { value: 'lb', label: 'pounds (lb)' }], required: true })}
         ${selectField({ name: 'lengthUnit', label: 'Size unit', values: v, errors, options: [{ value: 'cm', label: 'centimetres (cm)' }, { value: 'in', label: 'inches (in)' }], required: true })}
       </div>
       <div class="grid-3">
-        ${textField({ name: 'length', label: 'Length', values: v, errors, type: 'number', inputmode: 'decimal', min: '0', step: 'any', required: true })}
-        ${textField({ name: 'width', label: 'Width', values: v, errors, type: 'number', inputmode: 'decimal', min: '0', step: 'any', required: true })}
-        ${textField({ name: 'height', label: 'Height', values: v, errors, type: 'number', inputmode: 'decimal', min: '0', step: 'any', required: true })}
+        ${textField({ name: 'length', label: translate(lang, 'calc.length', 'Length'), values: v, errors, type: 'number', inputmode: 'decimal', min: '0', step: 'any', required: true })}
+        ${textField({ name: 'width', label: translate(lang, 'calc.width', 'Width'), values: v, errors, type: 'number', inputmode: 'decimal', min: '0', step: 'any', required: true })}
+        ${textField({ name: 'height', label: translate(lang, 'calc.height', 'Height'), values: v, errors, type: 'number', inputmode: 'decimal', min: '0', step: 'any', required: true })}
       </div>
     </fieldset>
-    ${opts.compact
-      ? ''
-      : html`<fieldset class="fieldset">
-          <legend>Value and cover</legend>
-          <div class="grid-2">
-            ${textField({ name: 'declaredValue', label: 'Value of the goods', values: v, errors, type: 'number', inputmode: 'decimal', min: '0', step: 'any', hint: 'In the calculator currency. Needed for optional cover and for international customs information.' })}
-            ${checkboxField({ name: 'insurance', label: 'Add optional shipment cover', hint: 'Cover is subject to terms and exclusions.', checked: v.insurance === 'on' || v.insurance === 'true', errors })}
-          </div>
-        </fieldset>`}
+    <p class="small muted">${translate(lang, 'calc.valueNote', 'Declared value and shipment cover are recorded by your coordinator when the shipment is created.')}</p>
     <div class="form-actions">
-      <button class="btn btn-primary" type="submit">${icons.calculator()} Calculate</button>
-      ${opts.compact ? html`<a class="link-quiet" href="/calculator">More options (cities, postal codes, cover)</a>` : ''}
+      <button class="btn btn-primary" type="submit">${icons.calculator()} ${translate(lang, 'calc.calculate', 'Calculate')}</button>
+      ${opts.compact ? html`<a class="link-quiet" href="/calculator">More options (cities and postal codes)</a>` : ''}
     </div>
   </form>`;
 }
@@ -106,7 +98,7 @@ export function quoteLink(values: Values): string {
   return `/quote?${q.toString()}`;
 }
 
-export function estimateResultView(r: EstimateResult, values: Values): SafeHtml {
+export function estimateResultView(r: EstimateResult, values: Values, lang: Lang = 'en'): SafeHtml {
   const unit = values.weightUnit ?? 'kg';
   const route = `${countryName(values.originCountry ?? '')}${values.originCity ? ` (${values.originCity})` : ''} → ${countryName(values.destinationCountry ?? '')}${values.destinationCity ? ` (${values.destinationCity})` : ''}`;
   const basisText =
@@ -140,12 +132,16 @@ export function estimateResultView(r: EstimateResult, values: Values): SafeHtml 
       <div>
         <h3>How your shipment is measured</h3>
         <dl class="dl">
-          <div><dt>Actual weight</dt><dd>${kg(r.weights.actualKg, unit)}</dd></div>
+          <div><dt>${translate(lang, 'calc.actual', 'Actual weight')}</dt><dd>${kg(r.weights.actualKg, unit)}</dd></div>
           ${r.weights.dimensionalKg !== null
-            ? html`<div><dt>Dimensional weight</dt><dd>${kg(r.weights.dimensionalKg, unit)}</dd></div>`
-            : html`<div><dt>Dimensional weight</dt><dd>Not applied to documents on this service</dd></div>`}
-          <div><dt>Billable weight</dt><dd><strong>${kg(r.weights.billableKg, unit)}</strong></dd></div>
+            ? html`<div><dt>${translate(lang, 'calc.dimensional', 'Dimensional weight')}</dt><dd>${kg(r.weights.dimensionalKg, unit)}</dd></div>`
+            : html`<div><dt>${translate(lang, 'calc.dimensional', 'Dimensional weight')}</dt><dd>Not applied to documents on this service</dd></div>`}
+          <div><dt>${translate(lang, 'calc.billable', 'Billable weight')}</dt><dd><strong>${kg(r.weights.billableKg, unit)}</strong></dd></div>
+          <div><dt>${translate(lang, 'calc.distance', 'Distance')}</dt><dd>${r.distanceKm === null
+            ? translate(lang, values.originCountry === values.destinationCountry ? 'calc.distanceSame' : 'calc.distanceMissing', 'Your coordinator records the kilometres.')
+            : html`${r.distanceKm.toLocaleString('en-US')} km`}</dd></div>
         </dl>
+        ${r.distanceKm !== null ? html`<p class="small muted">${translate(lang, 'calc.distanceNote', r.distanceNote)}</p>` : ''}
         <p class="small">${basisText}</p>
         ${r.weights.divisorDescription ? html`<p class="small muted">Dimensional weight = ${r.weights.divisorDescription}. ${r.weights.roundingDescription}</p>` : html`<p class="small muted">${r.weights.roundingDescription}</p>`}
       </div>

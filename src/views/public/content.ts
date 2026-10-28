@@ -2,24 +2,40 @@ import { html, type SafeHtml } from '../../lib/html.ts';
 
 export const FAQ_ITEMS: { q: string; a: SafeHtml }[] = [
   {
+    q: 'Where do I find my tracking code?',
+    a: html`<p>Your tracking code starts with <strong>CL</strong> and is sent by your coordinator when your shipment is booked. Enter it on the <a href="/track">tracking page</a>. Share it only with people who need to follow the shipment.</p>`,
+  },
+  {
+    q: 'How long does a shipment usually take?',
+    a: html`<p>Air freight is often a few days, ocean freight a number of weeks, and road freight depends on the distance. Those are typical carrier ranges. Your written quote states the transit estimate for your route. It is an estimate, and weather, customs and the carrier can change it.</p>`,
+  },
+  {
+    q: 'Do you prepare customs documents?',
+    a: html`<p>For international shipments we help you prepare the commercial documents the carrier asks for, such as an invoice and a description of the goods. Clearance is carried out by the carrier or a broker named on your confirmation. Crownline does not act as a licensed customs broker.</p>`,
+  },
+  {
+    q: 'Is my shipment insured?',
+    a: html`<p>Cover applies only when it is written on your confirmed quote. Ask for it before booking if you need it, and keep those terms. Otherwise, compensation for loss or damage follows the carrier’s liability limits. Report a problem through the <a href="/claims">claims process</a>.</p>`,
+  },
+  {
+    q: 'Do you show the live location of my shipment?',
+    a: html`<p>The tracking page shows the last confirmed scan: the place and the time it was recorded. Map, Satellite and Terrain are three views of that place. A moving vehicle position appears only when a live feed is connected for that shipment. No live feed is connected on this platform today.</p>`,
+  },
+  {
+    q: 'What can I not send?',
+    a: html`<p>Restrictions depend on the route and the carrier. Dangerous goods, lithium batteries, liquids, perishables, cash, weapons and items prohibited by the origin or destination country need advance approval or cannot be accepted. Describe the goods accurately in your quote request.</p>`,
+  },
+  {
     q: 'Is the price from the calculator final?',
-    a: html`<p>No. The calculator shows how your shipment is measured and, where pricing is configured, an indicative estimate. When the site is in demonstration mode the figures are samples only. A confirmed price is always sent to you by a coordinator before anything is booked.</p>`,
+    a: html`<p>The calculator shows billable weight and, where a rate card is loaded, an itemised estimate. In demonstration mode those figures are samples. A coordinator sends the price in writing before anything is booked.</p>`,
   },
   {
     q: 'What is dimensional (volumetric) weight?',
     a: html`<p>Carriers charge for space as well as weight. Dimensional weight converts a package’s size into a weight using a divisor, for example length × width × height in centimetres ÷ 5,000. You are charged for whichever is greater: the actual weight or the dimensional weight. This is called the billable weight.</p>`,
   },
   {
-    q: 'Where do I find my tracking code?',
-    a: html`<p>Your tracking code starts with <strong>CL</strong> and is sent by your coordinator when your shipment is booked. Enter it on the <a href="/track">tracking page</a>. Codes are private: share them only with people who need to follow the shipment.</p>`,
-  },
-  {
     q: 'Why has my tracking not changed for a while?',
     a: html`<p>Tracking updates appear when a carrier or our team confirms a milestone. Long legs such as sea crossings or customs processing can go several days without a new scan. If there is a known problem, the tracking page shows it as an issue with an explanation. If you are concerned, <a href="/contact?topic=tracking">contact us</a>.</p>`,
-  },
-  {
-    q: 'Do you show the live location of my shipment?',
-    a: html`<p>Only when a real vehicle or device tracking feed is connected, and none is connected today. Normally we show the last confirmed scan location and its time. We never animate a parcel on a map or call a position “live” without real location data.</p>`,
   },
   {
     q: 'Who pays import duties and taxes?',
@@ -27,15 +43,11 @@ export const FAQ_ITEMS: { q: string; a: SafeHtml }[] = [
   },
   {
     q: 'Which carriers do you use?',
-    a: html`<p>Crownline selects a suitable carrier or transport partner for each confirmed booking and tells you who it is. We do not claim partnerships or special rates with any carrier unless an agreement is in place.</p>`,
+    a: html`<p>The carrier for your shipment is named on the written confirmation. Crownline arranges that booking. Any special rate is part of the same confirmation.</p>`,
   },
   {
     q: 'Can I change the delivery address after booking?',
     a: html`<p>Sometimes, depending on the carrier and how far the shipment has travelled. Contact us as soon as possible with your shipment reference. Address changes may incur a carrier fee.</p>`,
-  },
-  {
-    q: 'What can I not send?',
-    a: html`<p>Restrictions depend on the route and carrier. Dangerous goods, lithium batteries, liquids, perishables, cash, weapons and items prohibited by the origin or destination country need advance approval or cannot be accepted. Always describe your goods accurately in your quote request.</p>`,
   },
   {
     q: 'What happens if my shipment is damaged or lost?',
@@ -150,7 +162,7 @@ export const PRIVACY_SECTIONS: { h: string; body: SafeHtml }[] = [
 ];
 
 export const COOKIE_SECTIONS: { h: string; body: SafeHtml }[] = [
-  { h: 'Public website', body: html`<p>The public website does not set cookies and does not use analytics, advertising or social-media tracking.</p>` },
+  { h: 'Public website', body: html`<p>The public website sets two strictly necessary cookies so the pages you asked for stay consistent: <strong>theme</strong> (light or dark) and <strong>lang</strong> (the language you chose). They last one year, are not used for analytics or advertising, and are not sent to any other site. The public website does not use analytics, advertising or social-media tracking.</p>` },
   {
     h: 'Staff console',
     body: html`<p>The staff console at /admin uses strictly necessary cookies:</p>

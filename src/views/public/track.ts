@@ -1,4 +1,6 @@
 import { html, type SafeHtml } from '../../lib/html.ts';
+import { translate, type Lang } from '../../i18n/index.ts';
+import { ASSET_VERSION } from '../layout.ts';
 import { formatDate, formatDateTime } from '../../lib/time.ts';
 import type { PublicTrackingView } from '../../services/tracking.ts';
 import { notice, progressBar } from '../components.ts';
@@ -29,11 +31,8 @@ function step(s: PublicTrackingView['steps'][number]): SafeHtml {
   </li>`;
 }
 
-function mapPanel(v: PublicTrackingView): SafeHtml {
-  const places = [v.places.origin, v.places.destination, v.places.current].filter((p) => p !== null);
-  if (places.length === 0) return html``;
-  const countryLevel = places.some((p) => p.precision === 'country');
-  const payload = JSON.stringify({ origin: v.places.origin, destination: v.places.destination, current: v.places.current });
+export function trackingMap(data: unknown, label: string): SafeHtml {
+  const payload = JSON.stringify(data);
   return html`<div class="map-shell">
     <div class="map-toolbar" role="group" aria-label="Map style">
       <button type="button" data-map-style="streets" aria-pressed="true">Map</button>
@@ -42,23 +41,58 @@ function mapPanel(v: PublicTrackingView): SafeHtml {
       <button type="button" class="map-zoom" data-map-zoom="in" aria-label="Zoom in">+</button>
       <button type="button" class="map-zoom" data-map-zoom="out" aria-label="Zoom out">−</button>
     </div>
-    <canvas class="shipment-map" data-map="${payload}" role="img" aria-label="Map of the booked route and last confirmed location"></canvas>
-    ${countryLevel ? html`<p class="small map-note">A point shown at country level means that update named a country, or a city this map does not place precisely.</p>` : ''}
+    <canvas class="shipment-map" data-map="${payload}" role="img" aria-label="${label}"></canvas>
     <p class="small map-note">Imagery © Esri, Maxar, Earthstar Geographics and the GIS user community.</p>
-    <script src="/js/map.js" defer></script>
   </div>`;
 }
 
-export function trackingResultView(v: PublicTrackingView): SafeHtml {
+function mapPanel(v: PublicTrackingView): SafeHtml {
+  const places = [v.places.origin, v.places.destination, v.places.current].filter((p) => p !== null);
+  if (places.length === 0) return html``;
+  const countryLevel = places.some((p) => p.precision === 'country');
+  return html`${trackingMap(
+    { origin: v.places.origin, destination: v.places.destination, current: v.places.current },
+    'Map of the booked route and last confirmed location',
+  )}
+    ${countryLevel ? html`<p class="small map-note">A point shown at country level means that update named a country, or a city this map does not place precisely.</p>` : ''}`;
+}
+
+export function trackingFeed(v: PublicTrackingView, lang: Lang) {
+  const status = translate(lang, `ms.${v.statusCode}`, v.status.label);
+  return {
+    revision: v.revision,
+    status,
+    explanation: v.status.explanation,
+    progress: v.progressPercent,
+    progressNote: translate(lang, v.progressSource === 'coordinator' ? 'track.progressCoordinator' : 'track.progressMilestone', ''),
+    timeline: v.timeline.map((e) => ({
+      time: formatDateTime(e.occurredAt, e.timeZone),
+      label: e.label,
+      location: e.location,
+      note: e.note,
+    })),
+    charges: v.charges.map((c) => ({
+      description: c.description,
+      amount: c.amountLabel,
+      status: translate(lang, c.status === 'settled' ? 'track.settled' : 'track.issued', c.status),
+      note: c.note,
+    })),
+    chargeNote: translate(lang, 'track.chargeNote', ''),
+  };
+}
+
+export function trackingResultView(v: PublicTrackingView, code: string, lang: Lang = 'en'): SafeHtml {
+  const statusLabel = translate(lang, `ms.${v.statusCode}`, v.status.label);
+  const progressNote = translate(lang, v.progressSource === 'coordinator' ? 'track.progressCoordinator' : 'track.progressMilestone', 'The percentage follows confirmed milestones, not the distance travelled. It reaches 100% only when delivery is confirmed.');
   const latest = v.latestEvent;
   const located = v.timeline.find((e) => e.location);
-  return html`<section class="track-result" aria-labelledby="track-status" tabindex="-1" data-autofocus>
+  return html`<section class="track-result" aria-labelledby="track-status" tabindex="-1" data-autofocus data-track-live="${code}" data-revision="${v.revision}">
     <div class="track-summary card">
       <div class="track-summary-head">
         <div>
           <p class="eyebrow">${v.serviceName} · code ending ${v.codeHint}</p>
-          <h2 id="track-status" class="track-status">${v.status.label}</h2>
-          <p>${v.status.explanation}</p>
+          <h2 id="track-status" class="track-status" data-live="status">${statusLabel}</h2>
+          <p data-live="explanation">${v.status.explanation}</p>
           ${v.status.customerAction ? html`<p class="callout">${icons.info()} <span><strong>What you can do:</strong> ${v.status.customerAction}</span></p>` : ''}
         </div>
         <div class="route-chip" aria-label="Route">
@@ -68,8 +102,16 @@ export function trackingResultView(v: PublicTrackingView): SafeHtml {
         </div>
       </div>
 
-      ${progressBar(v.progressPercent, 'Milestone progress')}
-      <p class="small muted">The percentage reflects confirmed shipment milestones, not the distance travelled. It only reaches 100% when delivery is confirmed.</p>
+      <div data-live="progress-wrap">${progressBar(v.progressPercent, statusLabel)}</div>
+      <p class="small muted" data-live="progress-note">${progressNote}</p>
+      <p class="small">${translate(lang, v.coverIncluded ? 'track.coverYes' : 'track.coverNo', v.coverIncluded ? 'Shipment cover was included by your coordinator.' : 'Shipment cover was not included.')}</p>
+      ${v.charges.length
+        ? html`<section class="charge-list" aria-label="${translate(lang, 'track.charges', 'Charges')}">
+            <h3>${translate(lang, 'track.charges', 'Charges')}</h3>
+            <ul data-live="charges">${v.charges.map((c) => html`<li><span>${c.description}</span><strong>${c.amountLabel}</strong><span>${translate(lang, c.status === 'settled' ? 'track.settled' : 'track.issued', c.status)}</span>${c.note ? html`<span class="small muted">${c.note}</span>` : ''}</li>`)}</ul>
+            <p class="small muted" data-live="charge-note">${translate(lang, 'track.chargeNote', 'These figures were prepared by Crownline. This page does not take card payments.')}</p>
+          </section>`
+        : html`<section class="charge-list" hidden data-live="charges-section" aria-label="${translate(lang, 'track.charges', 'Charges')}"><h3>${translate(lang, 'track.charges', 'Charges')}</h3><ul data-live="charges"></ul><p class="small muted" data-live="charge-note"></p></section>`}
 
       <div class="track-facts">
         <div>
@@ -104,9 +146,8 @@ export function trackingResultView(v: PublicTrackingView): SafeHtml {
 
       <section class="card" aria-labelledby="timeline-title">
         <h3 id="timeline-title">Shipment history</h3>
-        ${v.timeline.length === 0
-          ? html`<p class="muted">No confirmed events have been recorded yet.</p>`
-          : html`<ol class="timeline">
+        <p class="muted" data-live="timeline-empty" ${v.timeline.length > 0 ? html`hidden` : ''}>No confirmed events have been recorded yet.</p>
+        ${html`<ol class="timeline" data-live="timeline" ${v.timeline.length === 0 ? html`hidden` : ''}>
               ${v.timeline.map(
                 (e) => html`<li class="tl tl-${e.kind}">
                   <span class="tl-time"><time datetime="${e.occurredAt.toISOString()}">${formatDateTime(e.occurredAt, e.timeZone)}</time></span>
@@ -136,13 +177,13 @@ export function trackingResultView(v: PublicTrackingView): SafeHtml {
         <p class="small"><a href="/contact?topic=tracking">Report a problem with this shipment</a></p>
       </section>
     </div>
+    <script src="/js/track-live.js?v=${ASSET_VERSION}" defer></script>
   </section>`;
 }
 
-/** Static, clearly labelled example for the homepage. No database data is used. */
+/** Homepage illustration of the record a customer sees. No database data is used. */
 export function trackingPreview(): SafeHtml {
-  return html`<figure class="preview card" aria-labelledby="preview-caption">
-    <div class="preview-flag">Example only · fictional shipment</div>
+  return html`<figure class="preview card" aria-label="Status, progress and milestones">
     <p class="eyebrow">International parcel · code ending 4TR8</p>
     <p class="track-status">In international transit</p>
     ${progressBar(60, 'Milestone progress')}
@@ -151,6 +192,6 @@ export function trackingPreview(): SafeHtml {
       <li class="tl tl-milestone"><span class="tl-time">13 Oct, 18:40 CEST</span><span class="tl-label">Departed origin</span></li>
       <li class="tl tl-milestone"><span class="tl-time">12 Oct, 11:05 CEST</span><span class="tl-label">Collected</span></li>
     </ol>
-    <figcaption id="preview-caption" class="small muted">Illustration of the tracking page using invented data. Real tracking pages show only events confirmed for your shipment.</figcaption>
+    <p class="preview-issue"><strong>Open issue</strong> Commercial invoice requested before the next milestone can be confirmed.</p>
   </figure>`;
 }

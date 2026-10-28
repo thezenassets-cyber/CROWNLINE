@@ -1,7 +1,7 @@
 # Render Blueprint for Crownline Express.
 # Connect this GitHub repository in Render, then apply the Blueprint.
-# After the first deploy, add crownlineexpress.org as a custom domain and
-# set SITE_URL to https://crownlineexpress.org.
+# After the first deploy, add crownlineexpress.com as a custom domain and
+# set SITE_URL to https://crownlineexpress.com.
 
 previewsEnabled: false
 

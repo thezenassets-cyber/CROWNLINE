@@ -61,6 +61,8 @@ export function shipmentForm(overrides: Partial<CreateShipmentForm> = {}): Creat
     contentsDescription: 'Ceramic samples',
     declaredValue: 250,
     declaredValueCurrency: 'EUR',
+    distanceKm: undefined,
+    coverIncluded: false,
     estimatedDeliveryDate: undefined,
     recordBooking: true,
     idempotencyKey: key(),

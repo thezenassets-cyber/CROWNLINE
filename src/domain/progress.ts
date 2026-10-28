@@ -67,6 +67,22 @@ export function computeProgress(defs: readonly MilestoneDefinition[], events: re
   return { currentMilestone: best?.code ?? null, progressPercent, lastEventAt, deliveredAt, hasOutOfOrderEvents };
 }
 
+/**
+ * The percentage a customer sees. A coordinator may set it directly.
+ * Delivery still forces 100%, and a coordinator cannot show 100% before delivery is confirmed.
+ */
+export function customerProgress(
+  milestonePercent: number,
+  displayProgress: number | null,
+  delivered: boolean,
+): { percent: number; source: 'milestone' | 'coordinator' } {
+  if (delivered) return { percent: 100, source: 'milestone' };
+  if (displayProgress === null || !Number.isInteger(displayProgress) || displayProgress < 0 || displayProgress > 99) {
+    return { percent: milestonePercent, source: 'milestone' };
+  }
+  return { percent: displayProgress, source: 'coordinator' };
+}
+
 export interface MilestoneStep extends MilestoneDefinition {
   /**
    * recorded: an event confirms this milestone.

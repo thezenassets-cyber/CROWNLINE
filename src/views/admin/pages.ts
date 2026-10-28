@@ -192,7 +192,8 @@ export function newShipmentPage(session: Session, values: Values, errors: FieldE
     </div></fieldset>
     ${party('sender', 'Sender')}
     ${party('recipient', 'Recipient')}
-    <fieldset class="fieldset"><legend>Packages</legend>
+    <fieldset class="fieldset"><legend>Measurement</legend>
+      <p class="small muted">Weight and size are stored with the shipment. Leave distance blank to use the estimated straight-line kilometres between country midpoints. That figure is not the carrier route. Declared value and cover are set here, not by the visitor.</p>
       <div class="grid-4">
         ${textField({ name: 'quantity', label: 'Quantity', type: 'number', values: v, errors, required: true, min: '1', step: '1' })}
         ${textField({ name: 'weight', label: 'Weight each', type: 'number', values: v, errors, required: true, step: 'any' })}
@@ -207,8 +208,10 @@ export function newShipmentPage(session: Session, values: Values, errors: FieldE
       <div class="grid-2">
         ${textField({ name: 'packageDescription', label: 'Package description', values: v, errors, maxlength: 200 })}
         ${textField({ name: 'contentsDescription', label: 'Contents (internal)', values: v, errors, maxlength: 500 })}
-        ${textField({ name: 'declaredValue', label: 'Declared value', type: 'number', values: v, errors, step: 'any' })}
+        ${textField({ name: 'declaredValue', label: 'Declared value', type: 'number', values: v, errors, step: 'any', hint: 'Required if cover is included. The customer tracking page does not show this amount.' })}
         ${textField({ name: 'declaredValueCurrency', label: 'Currency', values: v, errors, maxlength: 3, placeholder: 'USD' })}
+        ${textField({ name: 'distanceKm', label: 'Distance (km)', type: 'number', values: v, errors, min: '0', step: 'any', hint: 'Optional. A blank field uses the straight-line estimate.' })}
+        ${checkboxField({ name: 'coverIncluded', label: 'Include shipment cover', hint: 'Cover is added to the staff estimate only when this is selected and a declared value is entered.', checked: v.coverIncluded === 'on' || v.coverIncluded === 'true', errors })}
       </div>
     </fieldset>
     <fieldset class="fieldset"><legend>Status</legend>
@@ -225,7 +228,10 @@ export interface DetailExtras {
   eventErrors?: FieldErrors | undefined;
   eventValues?: Values | undefined;
   exceptionErrors?: FieldErrors | undefined;
+  chargeErrors?: FieldErrors | undefined;
+  chargeValues?: Values | undefined;
   issueKey: string;
+  coverNote?: string | undefined;
 }
 
 export function shipmentDetailPage(session: Session, d: ShipmentDetail, defs: Milestones, x: DetailExtras): SafeHtml {
@@ -249,7 +255,8 @@ export function shipmentDetailPage(session: Session, d: ShipmentDetail, defs: Mi
   <div class="detail-grid">
     <section class="card">
       <div class="status-row">${stateBadge(s)} ${openExceptions.length ? badge(`${openExceptions.length} open issue${openExceptions.length > 1 ? 's' : ''}`, 'warning') : ''}</div>
-      ${progressBar(s.progress_percent, milestoneLabel(defs, s.current_milestone))}
+      ${progressBar(s.display_progress ?? s.progress_percent, s.display_progress === null ? milestoneLabel(defs, s.current_milestone) : 'Coordinator figure')}
+      ${s.display_progress !== null ? html`<p class="small muted">Milestone calculation is ${s.progress_percent}%. The customer page shows ${s.display_progress}% until you clear it. Delivery still shows 100%.</p>` : ''}
       <dl class="dl dl-cols">
         <div><dt>Last confirmed update</dt><dd>${formatDateTime(s.last_event_at)}</dd></div>
         <div><dt>Delivered</dt><dd>${s.delivered_at ? formatDateTime(s.delivered_at) : '—'}</dd></div>
@@ -257,6 +264,8 @@ export function shipmentDetailPage(session: Session, d: ShipmentDetail, defs: Mi
         <div><dt>Carrier</dt><dd>${s.carrier_name ?? 'Not assigned'}${s.carrier_tracking_number ? html` · ${s.carrier_tracking_number}` : ''}</dd></div>
         <div><dt>Contents</dt><dd>${s.contents_description ?? '—'}</dd></div>
         <div><dt>Declared value</dt><dd>${s.declared_value_minor !== null ? formatMoney(s.declared_value_minor, s.declared_value_currency ?? 'USD') : '—'}</dd></div>
+        <div><dt>Distance</dt><dd>${s.distance_km == null ? 'Not estimated' : html`${Number(s.distance_km).toLocaleString('en-US')} km <span class="muted small">(${s.distance_source === 'coordinator' ? 'entered by a coordinator' : 'estimated straight-line, not the carrier route'})</span>`}</dd></div>
+        <div><dt>Cover</dt><dd>${x.coverNote ?? (s.cover_included ? 'Included' : 'Not included')}</dd></div>
         <div><dt>Created</dt><dd>${formatDateTime(s.created_at)}</dd></div>
         ${s.cancelled_at ? html`<div><dt>Cancelled</dt><dd>${formatDateTime(s.cancelled_at)} · ${s.cancel_reason}</dd></div>` : ''}
         ${s.archived_at ? html`<div><dt>Archived</dt><dd>${formatDateTime(s.archived_at)}</dd></div>` : ''}
@@ -285,9 +294,56 @@ export function shipmentDetailPage(session: Session, d: ShipmentDetail, defs: Mi
   </div>
 
   ${active && can(role, 'events.create')
+    ? html`<section class="card admin-section" id="progress">
+        <h2 class="h4">Progress the customer sees</h2>
+        <p class="small muted">Leave this empty to follow the milestone percentage (${s.progress_percent}%). A number here is what an open tracking page shows. It is not a vehicle position. 100% appears only after delivery is confirmed with evidence.</p>
+        <form class="inline-form" method="post" action="${base}/progress#progress">${csrf(session)}
+          <label>Percentage <input name="displayProgress" type="number" min="0" max="99" step="1" value="${s.display_progress ?? ''}" inputmode="numeric"></label>
+          <button class="btn btn-primary btn-sm" type="submit">Save percentage</button>
+          <button class="btn btn-ghost btn-sm" type="submit" name="clear" value="1">Use milestone percentage</button>
+        </form>
+      </section>`
+    : ''}
+
+  ${can(role, 'charges.manage')
+    ? html`<section class="card admin-section" id="charges">
+        <h2 class="h4">Charges for the customer page</h2>
+        <p class="small muted">Drafts stay in this console. Published and settled charges appear on the tracking page for anyone with the code. Settled means you recorded that it was paid elsewhere. This console does not take card payments.</p>
+        ${d.charges.length === 0 ? html`<p class="muted small">No charges yet.</p>` : html`<div class="table-wrap"><table class="table table-compact">
+          <thead><tr><th scope="col">Description</th><th scope="col">Amount</th><th scope="col">Status</th><th scope="col">On the tracking page</th></tr></thead>
+          <tbody>${d.charges.map((c) => html`<tr>
+            <td>${c.description}${c.public_note ? html`<span class="cell-note">${c.public_note}</span>` : ''}</td>
+            <td>${formatMoney(c.amount_minor, c.currency)}</td>
+            <td>${c.status}</td>
+            <td>${active ? html`<form class="inline-form" method="post" action="${base}/charges/${c.id}#charges">${csrf(session)}
+              <button class="btn btn-ghost btn-sm" name="status" value="published" type="submit">Publish</button>
+              <button class="btn btn-ghost btn-sm" name="status" value="settled" type="submit">Record settled</button>
+              <button class="btn btn-ghost btn-sm" name="status" value="draft" type="submit">Draft</button>
+              <button class="btn btn-ghost btn-sm" name="status" value="withdrawn" type="submit">Withdraw</button>
+            </form>` : c.status}</td>
+          </tr>`)}</tbody>
+        </table></div>`}
+        ${active ? html`<form method="post" action="${base}/charges#charges" novalidate>${csrf(session)}
+          ${errorSummary(x.chargeErrors)}
+          <div class="grid-3">
+            ${textField({ name: 'description', label: 'Description', values: x.chargeValues, errors: x.chargeErrors, required: true, maxlength: 160 })}
+            ${textField({ name: 'amount', label: 'Amount', values: x.chargeValues, errors: x.chargeErrors, required: true, inputmode: 'decimal' })}
+            ${textField({ name: 'currency', label: 'Currency', values: x.chargeValues, errors: x.chargeErrors, required: true, maxlength: 3, placeholder: 'USD' })}
+            ${textField({ name: 'issuedOn', label: 'Issue date', type: 'date', values: x.chargeValues, errors: x.chargeErrors })}
+          </div>
+          ${textArea({ name: 'publicNote', label: 'Note for the customer', values: x.chargeValues, errors: x.chargeErrors, rows: 2, maxlength: 300 })}
+          <div class="inline-form">
+            <button class="btn btn-ghost" name="visibility" value="draft" type="submit">Save draft</button>
+            <button class="btn btn-primary" name="visibility" value="published" type="submit">Publish to tracking</button>
+          </div>
+        </form>` : ''}
+      </section>`
+    : ''}
+
+  ${active && can(role, 'events.create')
     ? html`<section class="card admin-section" id="record-event">
         <h2 class="h4">Record a confirmed event</h2>
-        <p class="small muted">Record only events confirmed by the carrier, a scan or our own handling. Customers see the event type, time, location and the public note. Progress never goes backwards because of an out-of-order event.</p>
+        <p class="small muted">Record only events confirmed by the carrier, a scan or our own handling. The time can be earlier than today: use the date and time it actually happened. Customers see the event type, time, location and the public note. An open tracking page picks this up without a new search. Milestone progress never goes backwards because of an out-of-order event.</p>
         <form method="post" action="${base}/events#record-event" novalidate>
           ${csrf(session)}
           ${errorSummary(x.eventErrors)}
@@ -403,12 +459,18 @@ export function shipmentDetailPage(session: Session, d: ShipmentDetail, defs: Mi
   </div>`;
 }
 
-export function codeIssuedPage(shipment: ShipmentRow, code: string, expiresAt: Date | null): SafeHtml {
+export function codeIssuedPage(siteUrl: string, shipment: ShipmentRow, code: string, expiresAt: Date | null): SafeHtml {
+  const customerUrl = `${siteUrl}/track?code=${encodeURIComponent(code)}`;
+  const staffUrl = `${siteUrl}/admin/shipments/${shipment.id}`;
   return html`${pageTitle('Tracking code issued', undefined, shipment.reference)}
   <div class="card narrow-form" tabindex="-1" data-autofocus>
     ${notice('warning', 'Copy this code now', 'For security it is stored only as a one-way hash and cannot be shown again. If it is lost, revoke it and issue a new one.')}
     <p class="code-display">${code}</p>
-    <p class="small">${expiresAt ? `Valid until ${formatDateTime(expiresAt)}.` : 'Valid until revoked or the shipment is archived.'} Share it only with the sender or recipient through a trusted channel.</p>
+    <p class="small">${expiresAt ? `Valid until ${formatDateTime(expiresAt)}.` : 'Valid until revoked or the shipment is archived.'} Share the customer link only with the sender or recipient.</p>
+    <div class="field"><label for="customer-link">Customer tracking link</label><input id="customer-link" readonly value="${customerUrl}"></div>
+    <p class="small"><a href="${customerUrl}">Open the customer tracking page</a></p>
+    <div class="field"><label for="staff-link">Staff shipment link</label><input id="staff-link" readonly value="${staffUrl}"></div>
+    <p class="small">The staff link still requires a staff sign-in. Customers do not receive an admin password.</p>
     <a class="btn btn-primary" href="/admin/shipments/${shipment.id}#codes">Back to the shipment</a>
   </div>`;
 }
@@ -556,7 +618,7 @@ export function settingsPage(config: AppConfig, dbKind: string, role: Role): Saf
       <div><dt>Carrier APIs</dt><dd>${badge('Not configured', 'neutral')}<span class="cell-note">No carrier credentials are connected. All tracking events are recorded by staff.</span></dd></div>
       <div><dt>Maps</dt><dd>${status(!!config.integrations.mapboxPublicToken, 'Token present', 'Not configured')}<span class="cell-note">Tracking shows the last confirmed location as text. No live map is displayed.</span></dd></div>
       <div><dt>Email notifications</dt><dd>${badge('Not configured', 'neutral')}<span class="cell-note">Notification schema exists; no messages are sent.</span></dd></div>
-      <div><dt>Online payments</dt><dd>${badge('Not configured', 'neutral')}<span class="cell-note">Payment and invoice schema exists; no provider is connected and no card data is handled.</span></dd></div>
+      <div><dt>Online payments</dt><dd>${badge('Not configured', 'neutral')}<span class="cell-note">Staff can publish a charge onto a tracking page. No payment provider is connected and this console does not take card payments.</span></dd></div>
     </dl></section>
   </div>
   ${config.warnings.length && can(role, 'settings.read') ? html`<section class="card admin-section"><h2 class="h4">Startup warnings</h2><ul class="list-tight">${config.warnings.map((w) => html`<li>${w}</li>`)}</ul></section>` : ''}`;

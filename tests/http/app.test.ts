@@ -96,10 +96,13 @@ describe('public site', () => {
       assert.match(csp, /script-src 'self'/);
       assert.match(csp, /frame-ancestors 'none'/);
       assert.doesNotMatch(csp, /unsafe-inline/);
+      const nonce = /'nonce-([^']+)'/.exec(csp)?.[1];
+      assert.ok(nonce, `${path} CSP nonce`);
+      assert.ok(res.text.includes(`<script nonce="${nonce}">`), `${path} boot script nonce`);
       assert.equal(res.headers.get('x-frame-options'), 'DENY');
       assert.equal(res.headers.get('x-content-type-options'), 'nosniff');
       assert.equal(res.headers.get('x-powered-by'), null);
-      assert.doesNotMatch(res.text, /<script(?![^>]*\bsrc=)(?![^>]*application\/ld\+json)[^>]*>/, `${path} has an inline script`);
+      assert.doesNotMatch(res.text, /<script(?![^>]*\bsrc=)(?![^>]*application\/ld\+json)(?![^>]*\bnonce=)[^>]*>/, `${path} has an inline script`);
       assert.doesNotMatch(res.text, /\sstyle="/, `${path} has an inline style`);
       assert.doesNotMatch(res.text, /\sonclick=|javascript:/i, `${path} has inline handlers`);
       assert.equal(res.headers.get('set-cookie'), null, `${path} should not set cookies`);
@@ -233,6 +236,9 @@ describe('admin console and tracking lifecycle', () => {
     assert.equal(issued.headers.get('cache-control'), 'no-store');
     const code = /class="code-display">(CL-[0-9A-Z-]+)</.exec(issued.text)?.[1];
     assert.ok(code, 'code is shown once');
+    assert.match(issued.text, new RegExp(`/track\\?code=${code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+    assert.match(issued.text, /Staff shipment link/);
+    assert.match(issued.text, new RegExp(detailPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     const stored = (await db.query<{ n: number }>(`select count(*)::int as n from tracking_credentials where code_hash = $1 or code_hint = $1`, [code])).rows[0]!.n;
     assert.equal(stored, 0, 'the plaintext code is not stored');
 
@@ -257,6 +263,43 @@ describe('admin console and tracking lifecycle', () => {
     assert.match(track.text, /Rotterdam depot/);
     assert.match(track.text, /15%/);
     assert.ok(!track.text.includes('Driver 42 internal remark'), 'internal notes stay private');
+
+    detail = await c.get(detailPath);
+    const refused = await c.post(`${detailPath}/progress`, { _csrf: csrfOf(detail.text), displayProgress: '100' });
+    assert.equal(refused.status, 303);
+    assert.match((await c.get(detailPath)).text, /100% is shown only after delivery is confirmed with evidence/);
+    detail = await c.get(detailPath);
+    const shown = await c.post(`${detailPath}/progress`, { _csrf: csrfOf(detail.text), displayProgress: '40' });
+    assert.equal(shown.status, 303);
+    track = await visitor.get(`/track?code=${code}`);
+    assert.match(track.text, /40%/);
+    assert.match(track.text, /coordinator/);
+    const feed = await visitor.get(`/track/feed?code=${encodeURIComponent(code!)}`);
+    assert.equal(feed.status, 200);
+    const live = JSON.parse(feed.text) as { progress: number; charges: unknown[] };
+    assert.equal(live.progress, 40);
+    assert.deepEqual(live.charges, []);
+    const milestone = (await db.query<{ progress_percent: number; display_progress: number }>(`select progress_percent, display_progress from shipments where id = $1`, [detailPath.split('/').pop()])).rows[0]!;
+    assert.equal(Number(milestone.progress_percent), 15);
+    assert.equal(Number(milestone.display_progress), 40);
+
+    detail = await c.get(detailPath);
+    const drafted = await c.post(`${detailPath}/charges`, {
+      _csrf: csrfOf(detail.text), description: 'Origin handling', amount: '18.50', currency: 'eur', visibility: 'draft',
+    });
+    assert.equal(drafted.status, 303);
+    assert.ok(!(await visitor.get(`/track?code=${code}`)).text.includes('Origin handling'), 'a draft charge stays off the customer page');
+    detail = await c.get(detailPath);
+    const chargeId = /\/charges\/([0-9a-f-]{36})/.exec(detail.text)?.[1];
+    assert.ok(chargeId);
+    const published = await c.post(`${detailPath}/charges/${chargeId}`, { _csrf: csrfOf(detail.text), status: 'published' });
+    assert.equal(published.status, 303);
+    track = await visitor.get(`/track?code=${code}`);
+    assert.match(track.text, /Origin handling/);
+    assert.match(track.text, /18\.50/);
+    assert.match(track.text, /does not take card payments/);
+    const publishedFeed = JSON.parse((await visitor.get(`/track/feed?code=${encodeURIComponent(code!)}`)).text) as { charges: { description: string }[] };
+    assert.equal(publishedFeed.charges[0]?.description, 'Origin handling');
 
     detail = await c.get(detailPath);
     const badDelivery = await c.post(`${detailPath}/events`, { _csrf: csrfOf(detail.text), eventType: 'delivered', occurredAtLocal: '2026-01-06T10:30', timeZone: 'UTC' });
@@ -311,12 +354,15 @@ describe('admin console and tracking lifecycle', () => {
     assert.ok(!detail.text.includes('Issue tracking code'), 'operator is not offered code issuance');
     assert.equal((await op.post(`${detailPath}/codes`, { _csrf: csrfOf(detail.text), requestKey: 'abcdefghijklmnop1234' })).status, 403);
     assert.equal((await op.post(`${detailPath}/cancel`, { _csrf: csrfOf(detail.text), reason: 'not allowed to', confirm: 'on' })).status, 403);
+    assert.equal((await op.post(`${detailPath}/charges`, { _csrf: csrfOf(detail.text), description: 'Not permitted', amount: '1.00', currency: 'USD', visibility: 'published' })).status, 403);
 
     const auditor = await makeStaff(db, 'auditor');
     const au = await signIn(auditor.email, auditor.password);
     assert.equal((await au.get('/admin/audit')).status, 200);
     const auDetail = await au.get(detailPath);
     assert.equal((await au.post(`${detailPath}/events`, { _csrf: csrfOf(auDetail.text), eventType: 'collected', occurredAtLocal: '2026-01-05T10:30', timeZone: 'UTC' })).status, 403);
+    assert.equal((await au.post(`${detailPath}/charges`, { _csrf: csrfOf(auDetail.text), description: 'Not permitted', amount: '1.00', currency: 'USD', visibility: 'draft' })).status, 403);
+    assert.equal((await au.post(`${detailPath}/progress`, { _csrf: csrfOf(auDetail.text), displayProgress: '40' })).status, 403);
     const state = (await db.query<{ progress_percent: number }>(`select progress_percent from shipments where id = $1`, [detailPath.split('/').pop()])).rows[0]!;
     assert.equal(state.progress_percent, 0);
   });

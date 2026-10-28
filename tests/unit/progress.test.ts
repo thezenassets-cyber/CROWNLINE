@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeProgress, milestoneSteps, type MilestoneDefinition, type ProgressEvent } from '../../src/domain/progress.ts';
+import { computeProgress, customerProgress, milestoneSteps, type MilestoneDefinition, type ProgressEvent } from '../../src/domain/progress.ts';
 
 const defs: MilestoneDefinition[] = [
   ['booking_confirmed', 5, 10, false],
@@ -87,4 +87,13 @@ test('domestic routes hide international milestones and flag unconfirmed steps',
   assert.equal(steps[3]!.isCurrent, true);
   assert.equal(steps[4]!.state, 'pending');
   assert.equal(milestoneSteps(defs, events, true, state.currentMilestone).length, 10);
+});
+
+test('the customer percentage follows a coordinator figure until delivery', () => {
+  assert.deepEqual(customerProgress(45, null, false), { percent: 45, source: 'milestone' });
+  assert.deepEqual(customerProgress(45, 40, false), { percent: 40, source: 'coordinator' });
+  assert.deepEqual(customerProgress(45, 0, false), { percent: 0, source: 'coordinator' });
+  assert.deepEqual(customerProgress(45, 100, false), { percent: 45, source: 'milestone' });
+  assert.deepEqual(customerProgress(45, 12.5, false), { percent: 45, source: 'milestone' });
+  assert.deepEqual(customerProgress(95, 40, true), { percent: 100, source: 'milestone' });
 });

@@ -1,3 +1,4 @@
+import { DISTANCE_NOTE, straightLineKm } from './distance.ts';
 import type { RateCard, ServiceRate } from './rateCard.ts';
 import { CM_PER_IN, KG_PER_LB, round, roundUpTo, toCm, toKg, type LengthUnit, type WeightUnit } from './units.ts';
 import type { ShipmentType } from '../config/services.ts';
@@ -22,6 +23,8 @@ export interface EstimateInput {
   packages: PackageLine[];
   declaredValueMinor: number | null;
   insurance: boolean;
+  /** Staff override. When omitted, a straight-line country estimate is used. */
+  distanceKm?: number | null;
 }
 
 export interface FieldError {
@@ -68,6 +71,8 @@ export interface EstimateResult {
   transit: { minDays: number; maxDays: number } | null;
   exclusions: string[];
   assumptions: string[];
+  distanceKm: number | null;
+  distanceNote: string;
 }
 
 export type EstimateOutcome = { ok: true; result: EstimateResult } | { ok: false; errors: FieldError[] };
@@ -221,6 +226,7 @@ export function estimate(input: EstimateInput, card: RateCard, mode: PricingMode
   }
   assumptions.push('Collection and delivery addresses are assumed to be standard, accessible locations.');
 
+  const distanceKm = input.distanceKm != null ? input.distanceKm : straightLineKm(input.originCountry, input.destinationCountry);
   const base = {
     pricingMode: mode,
     isDemonstration: card.isDemonstration || mode === 'demo',
@@ -232,6 +238,8 @@ export function estimate(input: EstimateInput, card: RateCard, mode: PricingMode
     weights,
     transit: rate.transit[zone] ?? null,
     exclusions: rate.exclusions,
+    distanceKm,
+    distanceNote: DISTANCE_NOTE,
   } as const;
 
   if (mode === 'disabled') {

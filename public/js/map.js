@@ -23,19 +23,26 @@
     var data;
     try { data = JSON.parse(raw); } catch (e) { return; }
     var points = ['origin', 'destination', 'current'].map(function (key) { return data[key]; }).filter(Boolean);
-    if (!points.length) return;
+    var world = points.length === 0;
 
     var shell = canvas.closest('.map-shell');
-    var zoom = 4;
-    var center = {
-      lat: points.reduce(function (s, p) { return s + p.lat; }, 0) / points.length,
-      lng: points.reduce(function (s, p) { return s + p.lng; }, 0) / points.length,
-    };
+    var zoom = world ? 2 : 4;
+    var center = world
+      ? { lat: 8, lng: 0 }
+      : {
+          lat: points.reduce(function (s, p) { return s + p.lat; }, 0) / points.length,
+          lng: points.reduce(function (s, p) { return s + p.lng; }, 0) / points.length,
+        };
     var style = 'streets';
     var cache = {};
     var drag = null;
 
     function fit() {
+      if (world) {
+        zoom = 2;
+        center = { lat: 8, lng: 0 };
+        return;
+      }
       var width = canvas.clientWidth || 640;
       var height = canvas.clientHeight || 420;
       var best = 3;
@@ -102,9 +109,9 @@
         ctx.stroke();
         ctx.setLineDash([]);
       }
-      if (data.origin) marker(ctx, toScreen(data.origin), '#f4efe6', 'Origin');
-      if (data.destination) marker(ctx, toScreen(data.destination), '#17315c', 'Destination');
-      if (data.current) marker(ctx, toScreen(data.current), '#c4a15a', 'Last confirmed');
+      if (data.origin) marker(ctx, toScreen(data.origin), '#f4efe6', 'Origin', width);
+      if (data.destination) marker(ctx, toScreen(data.destination), '#17315c', 'Destination', width);
+      if (data.current) marker(ctx, toScreen(data.current), '#c4a15a', 'Last confirmed', width);
     }
 
     function drawTile(ctx, url, x, y) {
@@ -121,7 +128,7 @@
       img.src = url;
     }
 
-    function marker(ctx, p, fill, label) {
+    function marker(ctx, p, fill, label, width) {
       ctx.beginPath();
       ctx.arc(p.x, p.y, 7, 0, Math.PI * 2);
       ctx.fillStyle = fill;
@@ -184,6 +191,7 @@
 
     fit();
     resize();
+    requestAnimationFrame(resize);
     window.addEventListener('resize', resize);
   }
 
