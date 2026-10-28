@@ -86,6 +86,7 @@
   background: var(--sand);
 }
 .home-film .home-still { position: absolute; inset: 0; height: 100%; }
+.home-film-still .home-still { position: relative; inset: auto; height: auto; }
 .home-film video { position: relative; z-index: 1; }
 .home-film figcaption {
   position: relative;

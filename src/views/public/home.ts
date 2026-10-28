@@ -58,6 +58,13 @@ function homeService(
   </a>`;
 }
 
+function stillFilm(src: string, alt: string, kicker: string, title: string): SafeHtml {
+  return html`<figure class="home-film home-film-still">
+    <img class="home-still" src="${src}" alt="${alt}" width="1280" height="800">
+    <figcaption><span>${kicker}</span> ${title}</figcaption>
+  </figure>`;
+}
+
 function film(src: string, poster: string, kicker: string, title: string): SafeHtml {
   return html`<figure class="home-film">
     <img class="home-still" src="${poster}" alt="" width="1280" height="800">
@@ -111,7 +118,7 @@ export function homePage(config: AppConfig, calcValues: Values, lang: Lang = 'en
         <p>The confirmation names the service and the carrier.</p>
       </header>
       <div class="home-films">
-        ${film('/video/air-freight-operations.mp4', '/images/ops-air-freight.jpg', 'Air', 'Freight operations')}
+        ${stillFilm('/images/ops-air-freight.jpg', 'A white jet in flight with Crownline Express on the fuselage', 'Air', 'Freight operations')}
         ${film('/video/ocean-freight-operations.mp4', '/images/ops-ocean-fleet.jpg', 'Ocean', 'Cargo fleet')}
         ${film('/video/road-freight-operations.mp4', '/images/ops-ground-delivery.jpg', 'Road', 'Express ground delivery')}
       </div>

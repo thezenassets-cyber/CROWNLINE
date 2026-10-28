@@ -43,7 +43,7 @@ dimensions, and lazy loading below the fold.
 | `home/warehousing.jpg` | Home warehousing card. Generated aisle; storage is not offered | A carton aisle |
 | `home/customs-documents.jpg` | Home customs-documents card. Text in the picture is not legible | Papers on a desk |
 | `home/tracking.jpg` | Home tracking card. Generated office, not a Crownline workplace | A world map on a screen |
-| `ops-air-freight` | Home air-freight film poster | Scene description |
+| `ops-air-freight` | Home air-freight still. Same generated jet as the service card, marked Crownline Express. | A white jet in flight with Crownline Express on the fuselage |
 | `ops-ocean-fleet` | Home ocean-freight film poster | Scene description |
 | `ops-ground-delivery` | Home road-freight film poster | Scene description |
 | `overview-parcel-floor` | Home company overview | Scene description |
