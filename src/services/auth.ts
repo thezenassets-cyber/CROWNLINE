@@ -95,7 +95,10 @@ export async function login(db: Db, email: string, password: string, ip: string,
       must_change_password: boolean; status: string; failed_login_count: number; locked_until: Date | null;
     }>(
       `select id, email, display_name, role, password_hash, must_change_password, status, failed_login_count, locked_until
-       from users where email_normalized = $1`,
+       from users
+       where username_normalized = $1 or email_normalized = $1
+       order by case when username_normalized = $1 then 0 else 1 end
+       limit 1`,
       [normalized],
     )
   ).rows[0];
@@ -247,4 +250,43 @@ export async function createUser(
     if (isUniqueViolation(err)) throw new ConflictError('A user with that email address already exists.');
     throw err;
   }
+}
+
+/**
+ * Ensures the named owner can sign in with the supplied password.
+ * Used when the database is recreated on each deploy. The password stays in
+ * the server environment and is never written to the repository.
+ */
+export async function ensureBootstrapAdmin(db: Db, username: string, password: string): Promise<void> {
+  const displayName = username.trim();
+  const normalized = displayName.toLowerCase();
+  if (!/^[a-z][a-z0-9._-]{1,31}$/.test(normalized)) {
+    throw new Error('BOOTSTRAP_ADMIN_USERNAME must be 2–32 characters and start with a letter.');
+  }
+  const email = 'control@crownlineexpress.com';
+  const problem = passwordProblem(password, email);
+  if (problem) throw new Error(`BOOTSTRAP_ADMIN_PASSWORD is not acceptable: ${problem}`);
+  const hash = await hashPassword(password);
+  const existing = (
+    await db.query<{ id: string }>(
+      `select id from users where username_normalized = $1 or email_normalized = $2 limit 1`,
+      [normalized, email],
+    )
+  ).rows[0];
+  if (!existing) {
+    await db.query(
+      `insert into users (email, email_normalized, username, username_normalized, display_name, role, password_hash, must_change_password)
+       values ($1, $2, $3, $4, $5, 'owner', $6, false)`,
+      [email, email, displayName, normalized, displayName, hash],
+    );
+    return;
+  }
+  await db.query(
+    `update users
+     set email = $2, email_normalized = $3, username = $4, username_normalized = $5,
+         display_name = $6, role = 'owner', status = 'active', password_hash = $7,
+         must_change_password = false, failed_login_count = 0, locked_until = null, updated_at = now()
+     where id = $1`,
+    [existing.id, email, email, displayName, normalized, displayName, hash],
+  );
 }

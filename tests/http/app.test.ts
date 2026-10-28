@@ -214,10 +214,10 @@ describe('admin console and tracking lifecycle', () => {
     const form = await c.get('/admin/login');
     const wrong = await c.post('/admin/login', { _csrf: csrfOf(form.text), email: owner.email, password: 'wrong-password' });
     assert.equal(wrong.status, 401);
-    assert.match(wrong.text, /email or password is not correct/);
+    assert.match(wrong.text, /username or password is not correct/);
     const unknown = await c.post('/admin/login', { _csrf: csrfOf(wrong.text), email: 'nobody@example.test', password: 'wrong-password' });
     assert.equal(unknown.status, 401);
-    assert.match(unknown.text, /email or password is not correct/);
+    assert.match(unknown.text, /username or password is not correct/);
   });
 
   test('login never redirects off-site', async () => {

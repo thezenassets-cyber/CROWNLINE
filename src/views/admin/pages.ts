@@ -60,15 +60,16 @@ function confirmAction(o: { session: Session; action: string; label: string; war
   </details>`;
 }
 
-export function loginPage(o: { csrfToken: string; email: string; error?: string | undefined; next: string }): SafeHtml {
+export function loginPage(o: { csrfToken: string; username: string; error?: string | undefined; next: string }): SafeHtml {
   return html`<div class="card login-card">
-    <h1 class="h3">Staff sign in</h1>
-    <p class="muted small">For authorised Crownline team members only. Activity is logged.</p>
+    <p class="eyebrow">Control</p>
+    <h1 class="h3">Crownline control</h1>
+    <p class="muted small">Staff only. This console is separate from the public site. Activity is logged.</p>
     ${o.error ? notice('error', o.error, '') : ''}
     <form method="post" action="/admin/login" novalidate>
       ${hidden('_csrf', o.csrfToken)}
       ${hidden('next', o.next)}
-      ${textField({ name: 'email', label: 'Email', type: 'email', required: true, autocomplete: 'username', values: { email: o.email } })}
+      ${textField({ name: 'username', label: 'Username', type: 'text', required: true, autocomplete: 'username', values: { username: o.username } })}
       ${textField({ name: 'password', label: 'Password', type: 'password', required: true, autocomplete: 'current-password' })}
       <button class="btn btn-primary btn-block" type="submit">Sign in</button>
     </form>

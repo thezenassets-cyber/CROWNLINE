@@ -54,7 +54,7 @@ ${head(opts.title)}
   <a class="skip-link" href="#main">Skip to main content</a>
   <div class="admin-shell">
     <aside class="admin-side">
-      <a class="brand brand-inverse" href="/admin">${crownlineMark(30)}<span class="brand-text"><span class="brand-name">Crownline</span><span class="brand-sub">Express</span></span></a>
+      <a class="brand brand-inverse" href="/admin">${crownlineMark(30)}<span class="brand-text"><span class="brand-name">Crownline</span><span class="brand-sub">Control</span></span></a>
       <nav aria-label="Admin">
         <ul>${items.map((n) => html`<li><a href="${n.href}" ${current(n.href) ? html`aria-current="page"` : ''}>${n.icon()} ${n.label}</a></li>`)}</ul>
       </nav>
@@ -84,7 +84,7 @@ export function adminBareLayout(title: string, body: SafeHtml): string {
 ${head(title)}
 <body class="admin admin-bare">
   <main id="main" class="admin-bare-main">
-    <a class="brand" href="/">${crownlineMark(34)}<span class="brand-text"><span class="brand-name">Crownline</span><span class="brand-sub">Express</span></span></a>
+    <a class="brand" href="/admin/login">${crownlineMark(34)}<span class="brand-text"><span class="brand-name">Crownline</span><span class="brand-sub">Control</span></span></a>
     ${body}
   </main>
 </body>

@@ -128,10 +128,10 @@ export function adminRouter(ctx: AppContext): Router {
   });
 
   // ---- Sign in ----
-  const showLogin = (res: Response, o: { email?: string; error?: string; next?: unknown; status?: number }) => {
+  const showLogin = (res: Response, o: { username?: string; error?: string; next?: unknown; status?: number }) => {
     const token = randomBytes(24).toString('base64url');
     setCookie(res, config, LOGIN_CSRF_COOKIE, token, 3600);
-    res.status(o.status ?? 200).type('html').send(adminBareLayout('Sign in', loginPage({ csrfToken: token, email: o.email ?? '', error: o.error, next: safeAdminRedirect(o.next) })));
+    res.status(o.status ?? 200).type('html').send(adminBareLayout('Control', loginPage({ csrfToken: token, username: o.username ?? '', error: o.error, next: safeAdminRedirect(o.next) })));
   };
 
   r.get('/login', (req, res) => {
@@ -144,22 +144,23 @@ export function adminRouter(ctx: AppContext): Router {
     const body = bodyValues(req);
     const cookieToken = parseCookies(req.headers.cookie)[LOGIN_CSRF_COOKIE];
     const formToken = typeof req.body?._csrf === 'string' ? (req.body._csrf as string) : '';
+    const username = body.username || body.email;
     if (!cookieToken || !formToken || !safeEqual(cookieToken, formToken)) {
-      return showLogin(res, { email: body.email, error: 'Your sign-in form expired. Please try again.', next: body.next, status: 403 });
+      return showLogin(res, { username, error: 'Your sign-in form expired. Please try again.', next: body.next, status: 403 });
     }
     const limit = limiters.login.hit(ip);
     if (!limit.allowed) {
       logger.warn('auth.login_rate_limited', { ip });
       res.setHeader('Retry-After', String(limit.retryAfterSeconds));
-      return showLogin(res, { email: body.email, error: 'Too many sign-in attempts. Please wait a few minutes.', next: body.next, status: 429 });
+      return showLogin(res, { username, error: 'Too many sign-in attempts. Please wait a few minutes.', next: body.next, status: 429 });
     }
-    const parsed = LoginSchema.safeParse(body);
-    if (!parsed.success) return showLogin(res, { email: body.email, error: 'Enter your email and password.', next: body.next, status: 400 });
-    const result = await login(db, parsed.data.email, parsed.data.password, ip, req.get('user-agent') ?? '');
+    const parsed = LoginSchema.safeParse({ username, password: body.password });
+    if (!parsed.success) return showLogin(res, { username, error: 'Enter your username and password.', next: body.next, status: 400 });
+    const result = await login(db, parsed.data.username, parsed.data.password, ip, req.get('user-agent') ?? '');
     if (!result.ok) {
       return showLogin(res, {
-        email: parsed.data.email,
-        error: 'The email or password is not correct. After repeated failed attempts, sign-in is paused for 15 minutes.',
+        username: parsed.data.username,
+        error: 'The username or password is not correct. After repeated failed attempts, sign-in is paused for 15 minutes.',
         next: body.next,
         status: 401,
       });

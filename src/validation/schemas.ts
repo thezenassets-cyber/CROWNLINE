@@ -108,7 +108,7 @@ export const ContactSchema = z.object({
 });
 
 export const LoginSchema = z.object({
-  email: z.string().trim().toLowerCase().max(254),
+  username: z.string().trim().toLowerCase().min(1, 'Enter your username.').max(254),
   password: z.string().min(1).max(200),
 });
 

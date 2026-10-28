@@ -4,6 +4,7 @@ import { migrate } from './db/migrate.ts';
 import { DEMO_RATE_CARD, loadRateCardFile } from './domain/rateCard.ts';
 import { createApp } from './http/app.ts';
 import { createLogger } from './lib/logger.ts';
+import { ensureBootstrapAdmin } from './services/auth.ts';
 
 async function main(): Promise<void> {
   let config;
@@ -21,6 +22,10 @@ async function main(): Promise<void> {
 
   const db = await createDb(config.database);
   await migrate(db, (msg) => logger.info('db.migration', { message: msg }));
+  if (config.bootstrapAdmin.username && config.bootstrapAdmin.password) {
+    await ensureBootstrapAdmin(db, config.bootstrapAdmin.username, config.bootstrapAdmin.password);
+    logger.info('auth.bootstrap_admin', { username: config.bootstrapAdmin.username });
+  }
 
   // Disabled mode still uses the demo card's dimensional rules to show billable weight, never its prices.
   const rateCard = config.pricingMode === 'rate_card' && config.rateCardPath ? await loadRateCardFile(config.rateCardPath) : DEMO_RATE_CARD;

@@ -33,6 +33,9 @@ const EnvSchema = z.object({
   MAPBOX_PUBLIC_TOKEN: optionalString,
   EMAIL_PROVIDER: optionalString,
   PAYMENT_PROVIDER: optionalString,
+
+  BOOTSTRAP_ADMIN_USERNAME: optionalString,
+  BOOTSTRAP_ADMIN_PASSWORD: optionalString,
 });
 
 export type RawEnv = z.infer<typeof EnvSchema>;
@@ -64,6 +67,10 @@ export interface AppConfig {
     mapboxPublicToken: string | undefined;
     emailProvider: string | undefined;
     paymentProvider: string | undefined;
+  };
+  bootstrapAdmin: {
+    username: string | undefined;
+    password: string | undefined;
   };
   warnings: string[];
 }
@@ -121,6 +128,9 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env, overrides: P
   if (isProduction && !siteUrl.startsWith('https://')) {
     errors.push('SITE_URL must use https:// in production. On Render, set SITE_URL or rely on RENDER_EXTERNAL_URL.');
   }
+  if (Boolean(e.BOOTSTRAP_ADMIN_USERNAME) !== Boolean(e.BOOTSTRAP_ADMIN_PASSWORD)) {
+    errors.push('Set both BOOTSTRAP_ADMIN_USERNAME and BOOTSTRAP_ADMIN_PASSWORD, or neither.');
+  }
 
   if (errors.length > 0) throw new ConfigError(errors.join(' '));
 
@@ -149,6 +159,10 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env, overrides: P
       mapboxPublicToken: e.MAPBOX_PUBLIC_TOKEN,
       emailProvider: e.EMAIL_PROVIDER,
       paymentProvider: e.PAYMENT_PROVIDER,
+    },
+    bootstrapAdmin: {
+      username: e.BOOTSTRAP_ADMIN_USERNAME,
+      password: e.BOOTSTRAP_ADMIN_PASSWORD,
     },
     warnings,
     ...overrides,
