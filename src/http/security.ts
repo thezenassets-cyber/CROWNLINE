@@ -88,7 +88,9 @@ export function sameOriginWrites(config: AppConfig) {
         }
       }
     }
-    const allowed = config.isProduction ? [config.siteOrigin] : [config.siteOrigin, `${req.protocol}://${req.get('host')}`];
+    const host = req.get('host');
+    const requestOrigin = host ? `${req.protocol}://${host}` : '';
+    const allowed = config.isProduction ? config.siteOrigins : [...config.siteOrigins, requestOrigin];
     if (origin === 'null' || (source && !allowed.includes(source))) {
       res.status(403).type('text/plain').send('Cross-site form submissions are not allowed.');
       return;

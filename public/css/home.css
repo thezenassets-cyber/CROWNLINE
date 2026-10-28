@@ -173,6 +173,7 @@
   left: 0;
   right: 0;
   bottom: 0;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
@@ -397,12 +398,25 @@
   .home-films .home-film:nth-child(3) { grid-column: 1; justify-self: stretch; }
 }
 @media (max-width: 699px) {
-  .home-films, .home-services { grid-template-columns: 1fr; }
+  .home-films, .home-services { grid-template-columns: 1fr; gap: 1.15rem; }
   .home-films .home-film:nth-child(3) { grid-column: auto; width: auto; }
   .home-film video { aspect-ratio: 16 / 9; }
-  .home-service-photo { aspect-ratio: 5 / 4; }
-  .home-service h3 { font-size: 1.7rem; }
-  .home-service .home-service-body p { font-size: 1.12rem; }
+  .home-service-photo { aspect-ratio: 16 / 10; }
+  .home-service::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: rgba(8, 17, 31, 0.28);
+    pointer-events: none;
+  }
+  .home-service-body {
+    gap: 0.55rem;
+    padding: 2.2rem 1.2rem 1.25rem;
+    background: linear-gradient(180deg, rgba(8, 17, 31, 0.12) 0%, rgba(8, 17, 31, 0.78) 38%, rgba(8, 17, 31, 0.96) 72%);
+  }
+  .home-service h3 { font-size: 1.28rem; line-height: 1.22; }
+  .home-service .home-service-body p { font-size: 0.95rem; line-height: 1.45; }
 }
 html[data-theme='dark'] .home-hero .btn-ghost,
 html[data-theme='dark'] .home-hero a.btn-ghost {

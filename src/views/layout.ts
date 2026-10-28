@@ -4,7 +4,7 @@ import { SERVICES } from '../config/services.ts';
 import { LANGS, LANG_LABEL, textDir, translate, type Lang, type Theme } from '../i18n/index.ts';
 import { crownlineMark, icons } from './icons.ts';
 
-export const ASSET_VERSION = '0.19.0';
+export const ASSET_VERSION = '0.20.0';
 
 export interface PageMeta {
   title: string;
@@ -12,6 +12,7 @@ export interface PageMeta {
   path: string;
   noindex?: boolean;
   preloadImage?: string;
+  preloadVideo?: string;
   bodyClass?: string;
   lang?: Lang;
   theme?: Theme;
@@ -211,6 +212,7 @@ export function publicLayout(config: AppConfig, meta: PageMeta, body: SafeHtml):
   <link rel="manifest" href="/manifest.json">
   <link rel="preload" href="/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   ${meta.preloadImage ? html`<link rel="preload" as="image" href="${meta.preloadImage}" fetchpriority="high">` : ''}
+  ${meta.preloadVideo ? html`<link rel="preload" as="video" href="${meta.preloadVideo}" type="video/mp4">` : ''}
   <link rel="stylesheet" href="/css/site.css?v=${ASSET_VERSION}">
   ${meta.bodyClass?.includes('page-home') || meta.bodyClass?.includes('page-services') ? html`<link rel="stylesheet" href="/css/home.css?v=${ASSET_VERSION}">` : ''}
   <script type="application/ld+json">${raw(ld)}</script>

@@ -60,7 +60,7 @@ function homeService(
 
 function film(src: string, kicker: string, title: string): SafeHtml {
   return html`<figure class="home-film">
-    <video autoplay muted loop playsinline preload="metadata"><source src="${src}" type="video/mp4"></video>
+    <video class="home-film-video" muted loop playsinline preload="none"><source src="${src}" type="video/mp4"></video>
     <figcaption><span>${kicker}</span> ${title}</figcaption>
   </figure>`;
 }

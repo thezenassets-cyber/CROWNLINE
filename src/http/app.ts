@@ -26,7 +26,7 @@ export function createApp(opts: { config: AppConfig; db: Db; logger: Logger; rat
     const started = process.hrtime.bigint();
     res.on('finish', () => {
       const ms = Number(process.hrtime.bigint() - started) / 1e6;
-      const isAsset = /^\/(css|js|fonts|images)\//.test(req.path) || req.path === '/favicon.svg';
+      const isAsset = /^\/(css|js|fonts|images|video)\//.test(req.path) || req.path === '/favicon.svg';
       const entry = { method: req.method, url: redactUrl(req.originalUrl), status: res.statusCode, ms: Math.round(ms) };
       if (res.statusCode >= 500) logger.error('http.request', entry);
       else if (isAsset) logger.debug('http.request', entry);

@@ -115,6 +115,7 @@ export function publicRouter(ctx: AppContext): Router {
       description: 'Crownline Express coordinates parcel and freight shipping. You receive a written quote before booking and a private tracking code after it.',
       path: '/',
       bodyClass: 'page-home',
+      preloadVideo: '/video/port-operations.mp4',
     }, homePage(config, queryValues(req, CALCULATOR_FIELDS), readPrefs(req).lang));
   });
 

@@ -132,7 +132,7 @@ function shipmentTable(rows: ShipmentListRow[], defs: Milestones): SafeHtml {
         <td>${serviceName(s.service_code)}</td>
         <td>${s.origin_city}, ${s.origin_country} → ${s.destination_city}, ${s.destination_country}</td>
         <td>${milestoneLabel(defs, s.current_milestone)}</td>
-        <td class="num">${badge(`${s.progress_percent}%`, { red: 'danger', yellow: 'warning', green: 'success' }[progressTone(s.progress_percent)])}</td>
+        <td class="num">${badge(`${s.progress_percent}%`, progressTone(s.progress_percent) === 'red' ? 'danger' : progressTone(s.progress_percent) === 'yellow' ? 'warning' : 'success')}</td>
         <td>${formatDateTime(s.last_event_at)}</td>
         <td>${stateBadge(s)}</td>
       </tr>`,

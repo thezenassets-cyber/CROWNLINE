@@ -47,6 +47,8 @@ export interface AppConfig {
   host: string;
   siteUrl: string;
   siteOrigin: string;
+  /** Apex, www, and the Render hostname when they belong to this site. */
+  siteOrigins: string[];
   secureCookies: boolean;
   trustProxy: number;
   logLevel: RawEnv['LOG_LEVEL'];
@@ -78,6 +80,33 @@ export interface AppConfig {
 const DEV_TRACKING_SECRET = 'development-only-tracking-secret-do-not-use-in-production';
 
 export class ConfigError extends Error {}
+
+/** Origins that may POST to this app: the public URL, its www/apex twin, and Render. */
+export function relatedSiteOrigins(siteUrl: string, extras: string[] = []): string[] {
+  const origins = new Set<string>();
+  const add = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    try {
+      origins.add(new URL(trimmed).origin);
+    } catch {
+      /* ignore invalid URLs */
+    }
+  };
+  add(siteUrl);
+  for (const extra of extras) add(extra);
+  try {
+    const parsed = new URL(siteUrl);
+    const host = parsed.hostname.toLowerCase();
+    if (host.startsWith('www.')) add(`${parsed.protocol}//${host.slice(4)}`);
+    else if (host.includes('.') && host !== 'localhost' && !host.endsWith('.onrender.com') && !/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) {
+      add(`${parsed.protocol}//www.${host}`);
+    }
+  } catch {
+    /* ignore */
+  }
+  return [...origins];
+}
 
 /**
  * Validates environment variables once at startup. Production refuses to start
@@ -125,6 +154,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env, overrides: P
   const renderUrl = typeof source.RENDER_EXTERNAL_URL === 'string' ? source.RENDER_EXTERNAL_URL.trim().replace(/\/$/, '') : '';
   const siteUrl = (e.SITE_URL === 'http://localhost:3000' && renderUrl ? renderUrl : e.SITE_URL).replace(/\/$/, '');
   const siteOrigin = new URL(siteUrl).origin;
+  const siteOrigins = relatedSiteOrigins(siteUrl, [renderUrl]);
   if (isProduction && !siteUrl.startsWith('https://')) {
     errors.push('SITE_URL must use https:// in production. On Render, set SITE_URL or rely on RENDER_EXTERNAL_URL.');
   }
@@ -141,6 +171,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env, overrides: P
     host: e.HOST,
     siteUrl,
     siteOrigin,
+    siteOrigins,
     secureCookies: siteUrl.startsWith('https://'),
     trustProxy: e.TRUST_PROXY,
     logLevel: e.LOG_LEVEL,

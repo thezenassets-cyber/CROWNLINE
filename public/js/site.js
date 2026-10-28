@@ -53,12 +53,31 @@
     });
   });
 
+  function startFilm(video) {
+    video.muted = true;
+    video.play().catch(function () {});
+  }
+
   // Keep the hero still when the visitor has asked for less motion.
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     document.querySelectorAll('video').forEach(function (video) {
       video.removeAttribute('autoplay');
       video.pause();
     });
+  } else {
+    var films = document.querySelectorAll('video.home-film-video');
+    if (films.length && 'IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          startFilm(entry.target);
+          io.unobserve(entry.target);
+        });
+      }, { rootMargin: '240px 0px' });
+      films.forEach(function (video) { io.observe(video); });
+    } else {
+      films.forEach(startFilm);
+    }
   }
 
   // Prevent accidental double submission of forms that create records.
