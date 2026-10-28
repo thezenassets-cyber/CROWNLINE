@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+    <meta name="description" content="LIVEXPRESS real-time operations dashboard. View active shipments, delivery metrics, and global logistics performance data.">
+    <meta name="keywords" content="LIVEXPRESS dashboard, LIVEXPRESS, delivery metrics, shipment statistics, logistics performance, LIVEXPRESS">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Dashboard - LIVEXPRESS">
+    <meta property="og:description" content="Real-time operations dashboard. View active shipments, delivery metrics, and global logistics performance.">
+    <meta property="og:site_name" content="LIVEXPRESS">
+    <meta property="og:image" content="https://images.pexels.com/photos/1267338/pexels-photo-1267338.jpeg?auto=compress&cs=tinysrgb&w=1200">
+    <meta property="og:image:alt" content="LIVEXPRESS - Global Cargo Shipping & Logistics">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Dashboard - LIVEXPRESS">
+    <meta name="twitter:description" content="Real-time operations dashboard with active shipments, delivery metrics, and performance data.">
+    <meta name="twitter:image" content="https://images.pexels.com/photos/1267338/pexels-photo-1267338.jpeg?auto=compress&cs=tinysrgb&w=1200">
+    <meta name="twitter:image:alt" content="LIVEXPRESS - Operations Dashboard">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Crect x='2' y='10' width='46' height='32' rx='5' fill='%231D3557' stroke='%23E8C84A' stroke-width='2'/%3E%3Ctext x='25' y='32' text-anchor='middle' fill='%23E8C84A' font-family='sans-serif' font-weight='900' font-size='16'%3ELX%3C/text%3E%3C/svg%3E">
+    <title>Dashboard - LIVEXPRESS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <a href="#main-content" class="skip-nav">Skip to main content</a>
+    <nav class="navbar" id="mainNav" style="position:relative;">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">
+                <svg width="180" height="45" viewBox="0 0 260 55" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="translate(0, 2) scale(0.38)">
+                        <circle cx="35" cy="28" r="18" fill="#E8C84A" />
+                        <circle cx="29" cy="24" r="2.5" fill="#1D3557" />
+                        <circle cx="41" cy="24" r="2.5" fill="#1D3557" />
+                        <path d="M29 34 Q35 40 41 34" stroke="#1D3557" stroke-width="2" fill="none" stroke-linecap="round"/>
+                        <path d="M17 22 Q35 8 53 22" fill="#E63946" />
+                        <rect x="17" y="20" width="36" height="5" rx="2" fill="#E63946"/>
+                        <rect x="22" y="46" width="26" height="36" rx="6" fill="#E63946"/>
+                        <path d="M22 52 L6 62 L6 80 L18 80 L18 66 L22 60" fill="#E8C84A"/>
+                        <path d="M48 52 L64 62 L64 80 L52 80 L52 66 L48 60" fill="#E8C84A"/>
+                        <rect x="2" y="68" width="66" height="46" rx="5" fill="#1D3557" stroke="#E8C84A" stroke-width="2"/>
+                        <text x="35" y="96" text-anchor="middle" fill="#E8C84A" font-family="Orbitron, sans-serif" font-weight="800" font-size="14">LX</text>
+                        <rect x="24" y="82" width="10" height="32" rx="4" fill="#1D3557"/>
+                        <rect x="38" y="82" width="10" height="32" rx="4" fill="#1D3557"/>
+                        <rect x="20" y="110" width="16" height="8" rx="4" fill="#0d1b2a"/>
+                        <rect x="36" y="110" width="16" height="8" rx="4" fill="#0d1b2a"/>
+                    </g>
+                    <text x="38" y="26" fill="#E63946" font-family="Orbitron, sans-serif" font-weight="900" font-size="26" letter-spacing="3">LX</text>
+                    <text x="110" y="26" fill="#1D3557" font-family="Orbitron, sans-serif" font-weight="700" font-size="14" letter-spacing="2">LIVEXPRESS</text>
+                    <text x="38" y="44" fill="#6c757d" font-family="Inter, sans-serif" font-weight="500" font-size="9" letter-spacing="3">LOGISTICS &amp; DELIVERY</text>
+                </svg>
+            </a>
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="index.html" class="nav-link">Home</a></li>
+                <li><a href="tracking.html" class="nav-link">Tracking</a></li>
+                <li><a href="dashboard.html" class="nav-link active">Dashboard</a></li>
+                <li><a href="partners.html" class="nav-link">Partners</a></li>
+                <li><a href="index.html#contact" class="nav-link">Contact</a></li>
+            </ul>
+            <button class="nav-toggle" onclick="document.getElementById('navMenu').classList.toggle('active')" aria-label="Toggle navigation">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </nav>
+
+    <section class="subpage-hero" id="main-content">
+        <div class="container">
+            <h1><i class="fas fa-chart-line"></i> Operations Dashboard</h1>
+            <p>Real-time insights into our global delivery operations.</p>
+        </div>
+    </section>
+
+    <section class="dashboard">
+        <div class="container">
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <h3>Active Shipments</h3>
+                    <p id="activeShipments">—</p>
+                </div>
+                <div class="kpi-card">
+                    <h3>In Transit</h3>
+                    <p id="deliveryVehicles">—</p>
+                </div>
+                <div class="kpi-card">
+                    <h3>Total Shipments</h3>
+                    <p id="portsServed">—</p>
+                </div>
+                <div class="kpi-card">
+                    <h3>Delivered</h3>
+                    <p id="packagesDelivered">—</p>
+                </div>
+            </div>
+
+            <div class="charts">
+                <div class="chart-container">
+                    <h3>Shipment Status Distribution</h3>
+                    <canvas id="statusChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3>Recent Shipments Progress</h3>
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container" style="margin-top:2rem;">
+                <h3 style="margin-bottom:1rem;"><i class="fas fa-history" style="color:#E8C84A;margin-right:8px;"></i>Shipment History</h3>
+                <div id="recentShipments" style="overflow-x:auto;"></div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="footer-logo">
+                        <svg width="40" height="40" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="2" y="10" width="46" height="32" rx="5" fill="#1D3557" stroke="#E8C84A" stroke-width="2"/>
+                            <text x="25" y="32" text-anchor="middle" fill="#E8C84A" font-family="Orbitron, sans-serif" font-weight="800" font-size="16">LX</text>
+                        </svg>
+                        <span>LIVEXPRESS</span>
+                    </div>
+                    <p>Global logistics excellence. Delivering your cargo safely and on time, everywhere in the world.</p>
+                    <div class="footer-email">
+                        <i class="fas fa-envelope"></i>
+                        Contact details pending
+                    </div>
+                    <div class="social-links">
+                        <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                        <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                        <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="index.html#services">Services</a></li>
+                        <li><a href="index.html#calculator">Calculator</a></li>
+                        <li><a href="tracking.html">Tracking</a></li>
+                        <li><a href="index.html#contact">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Contact</h4>
+                    <ul>
+                        <li><i class="fas fa-envelope"></i> Contact details pending</li>
+                        <li><i class="fas fa-phone"></i> Contact number pending</li>
+                        <li><i class="fas fa-clock"></i> Service hours to be confirmed</li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="privacy-policy.html">Privacy Policy</a></li>
+                        <li><a href="terms.html">Terms of Service</a></li>
+                        <li><a href="cookie-policy.html">Cookie Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 LIVEXPRESS. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/config.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/chat-widget.js"></script>
+</body>
+</html>

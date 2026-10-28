@@ -1,0 +1,47 @@
+[
+  {
+    "id": "LX-2026-001234",
+    "origin": "Shanghai",
+    "destination": "Rotterdam",
+    "type": "Ocean Freight",
+    "status": "In Transit",
+    "progress": 65,
+    "eta": "2026-03-10"
+  },
+  {
+    "id": "LX-2026-005678",
+    "origin": "Los Angeles",
+    "destination": "Singapore",
+    "type": "Air Cargo",
+    "status": "Processing",
+    "progress": 15,
+    "eta": "2026-02-28"
+  },
+  {
+    "id": "LX-2026-009012",
+    "origin": "Dubai",
+    "destination": "Miami",
+    "type": "Ground Transport",
+    "status": "Delivered",
+    "progress": 100,
+    "eta": "2026-02-22"
+  },
+  {
+    "id": "LX-2026-003456",
+    "origin": "Rotterdam",
+    "destination": "New York",
+    "type": "Ocean Freight",
+    "status": "Loading",
+    "progress": 30,
+    "eta": "2026-03-15"
+  },
+  {
+    "id": "LX-2026-007890",
+    "origin": "Frankfurt",
+    "destination": "Tokyo",
+    "type": "Air Cargo",
+    "status": "In Flight",
+    "progress": 72,
+    "eta": "2026-02-25"
+  }
+]

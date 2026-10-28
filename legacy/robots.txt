@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+
+# Block admin and data from search engines
+Disallow: /admin.html
+Disallow: /dashboard.html
+Disallow: /data/
+Disallow: /node_modules/
+
+# Googlebot-specific
+User-agent: Googlebot
+Allow: /
+Disallow: /admin.html
+Disallow: /dashboard.html
+Disallow: /data/
+
+# Bingbot-specific
+User-agent: Bingbot
+Allow: /
+Disallow: /admin.html
+Disallow: /dashboard.html
+Disallow: /data/
