@@ -68,7 +68,7 @@ In Render → the web service → **Settings → Custom Domains → Add**:
 - `www.crownlineexpress.com`
 - Render also adds the root `crownlineexpress.com` and redirects one to the other.
 
-Copy the CNAME target Render shows (it looks like `crownline-express.onrender.com`).
+Copy the CNAME target Render shows. For the live service it is `crownlineexpress.onrender.com`.
 
 In Spaceship → the domain → **Advanced DNS** → **Custom records**.
 Spaceship stores a root CNAME as an ALIAS. Add these two records and no others for the website:
