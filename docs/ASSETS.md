@@ -38,7 +38,7 @@ dimensions, and lazy loading below the fold.
 | `service-warehouse-distribution` | Fulfilment service | Descriptive |
 | `tracking-operations-control-room` | About page header background | Decorative (`alt=""`) |
 | `home/ocean-freight.jpg` | Home ocean-freight card. Generated scene, not a Crownline vessel | A container ship at sea |
-| `home/air-freight.jpg` | Home air-freight card. Generated scene, not a Crownline aircraft | A freighter in flight |
+| `home/air-freight.jpg` and `service-air-freight-loading.jpg` | Air-freight card and service page. Generated jet in flight, marked Crownline Express. Not a photograph of a Crownline aircraft. | A white jet in flight with Crownline Express on the fuselage |
 | `home/road-freight.jpg` | Home road-freight card. Generated scene, not a Crownline truck | A truck on a highway |
 | `home/warehousing.jpg` | Home warehousing card. Generated aisle; storage is not offered | A carton aisle |
 | `home/customs-documents.jpg` | Home customs-documents card. Text in the picture is not legible | Papers on a desk |

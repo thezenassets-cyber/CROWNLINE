@@ -121,7 +121,7 @@ export const SERVICES: readonly ServiceDefinition[] = [
     scope: 'international',
     image: {
       src: '/images/service-air-freight-loading.jpg',
-      alt: 'A shrink-wrapped pallet being lifted into an unbranded cargo aircraft at dusk by a main-deck loader.',
+      alt: 'A white jet in flight with Crownline Express on the fuselage.',
     },
     page: {
       headline: 'Time-sensitive cargo, coordinated through air freight partners.',
