@@ -5,7 +5,7 @@
   "description": "Crownline Express — shipping coordination, quotes, tracking and operations platform",
   "type": "module",
   "engines": {
-    "node": ">=22.18.0"
+    "node": ">=22.18.0 <23.0.0"
   },
   "scripts": {
     "start": "node --env-file-if-exists=.env src/server.ts",
