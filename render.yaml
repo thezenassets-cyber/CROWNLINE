@@ -1,15 +1,14 @@
 # Render Blueprint for Crownline Express.
-# Connect this GitHub repository in Render, then apply the Blueprint.
-# After the first deploy, add crownlineexpress.com as a custom domain and
-# set SITE_URL to https://crownlineexpress.com.
+# Node is pinned with NODE_VERSION. Do not set nodeVersion; Render rejects that field.
+# The instance needs 2 GB. The 512 MB Starter plan runs out of memory while opening the database.
 
 previewsEnabled: false
 
 services:
   - type: web
-    name: crownline-express
+    name: crownlineexpress
     runtime: node
-    plan: standard
+    plan: 1c-2g
     region: frankfurt
     buildCommand: npm ci
     startCommand: npm start
