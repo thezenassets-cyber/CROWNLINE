@@ -9,7 +9,7 @@ services:
   - type: web
     name: crownline-express
     runtime: node
-    plan: starter
+    plan: standard
     region: frankfurt
     buildCommand: npm ci
     startCommand: npm start
