@@ -87,7 +87,10 @@
   background: #0c1730;
 }
 .home-film figcaption {
-  position: relative;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 2;
   display: flex;
   justify-content: space-between;
@@ -95,15 +98,18 @@
   gap: 1rem;
   margin: 0;
   padding: 0.85rem 1rem;
-  background: var(--white);
-  color: var(--navy-800);
+  background: rgba(8, 17, 31, 0.52);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #fbfaf6;
+  border-top: 1px solid rgba(215, 181, 106, 0.38);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 .home-frame figcaption span,
-.home-film figcaption span { color: var(--gold-600); font-weight: 650; letter-spacing: 0.08em; flex: 0 0 auto; }
+.home-film figcaption span { color: #d7b56a; font-weight: 650; letter-spacing: 0.08em; flex: 0 0 auto; }
 .home-film figcaption { flex-wrap: wrap; letter-spacing: 0.06em; }
 
 /* ---------- Shared pieces ---------- */
@@ -145,12 +151,12 @@
 
 .home-film, .home-service, .home-card, .home-step, .home-shot, .home-photo {
   background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  border: 1px solid var(--glass-line);
+  border-radius: 12px;
   min-width: 0;
 }
-.home-film { position: relative; overflow: hidden; margin: 0; box-shadow: var(--shadow-sm); }
-.home-film figcaption { border-top: 1px solid var(--line); }
+.home-film { position: relative; overflow: hidden; margin: 0; box-shadow: var(--glass-shadow); }
+.home-film figcaption { border-top: 1px solid rgba(215, 181, 106, 0.38); }
 
 .home-service {
   position: relative;
@@ -186,8 +192,8 @@
   box-shadow: var(--shadow-sm);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.home-service { box-shadow: var(--shadow-sm); transition: border-color 0.15s ease, box-shadow 0.15s ease; }
-.home-service:hover, .home-card:hover { border-color: var(--gold-400); box-shadow: var(--shadow); }
+.home-service { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 10px 28px rgba(8, 17, 31, 0.14); transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.home-service:hover, .home-card:hover { border-color: var(--gold-400); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), var(--shadow); }
 .home-ico {
   width: 42px; height: 42px;
   display: grid; place-items: center;
@@ -249,11 +255,11 @@
   min-height: 34rem;
   height: 100%;
   padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 4px;
+  border: 1px solid rgba(215, 181, 106, 0.45);
+  border-radius: 12px;
   background: #0c1730;
   color: #fbfaf6;
-  box-shadow: var(--shadow);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), var(--shadow);
 }
 .home-note img {
   position: absolute;
@@ -309,12 +315,12 @@
   align-items: start;
 }
 .home-panel {
-  background: #fbfaf6;
-  border: 0;
+  background: rgba(251, 250, 246, 0.96);
+  border: 1px solid rgba(215, 181, 106, 0.45);
   border-top: 4px solid #d7b56a;
-  border-radius: 6px;
+  border-radius: 12px;
   padding: clamp(1.6rem, 3vw, 2.35rem);
-  box-shadow: 0 28px 70px rgba(8, 17, 31, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 28px 70px rgba(8, 17, 31, 0.28);
 }
 #calculator {
   background: #0c1730;
@@ -404,7 +410,6 @@ html[data-theme='dark'] .home-hero a.btn-ghost {
   color: #fbfaf6;
   border-color: rgba(251, 250, 246, 0.55);
 }
-html[data-theme='dark'] .home-film figcaption,
 html[data-theme='dark'] .home-principles strong,
 html[data-theme='dark'] .home-ico,
 html[data-theme='dark'] .home-note strong,

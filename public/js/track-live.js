@@ -31,6 +31,9 @@
         bar.setAttribute('aria-label', data.status + ': ' + data.progress + '%');
         bar.textContent = data.progress + '%';
       }
+      var tone = data.progressTone === 'yellow' || data.progressTone === 'green' ? data.progressTone : 'red';
+      wrap.className = 'progress progress-' + tone;
+      wrap.setAttribute('data-progress-tone', tone);
     }
     var list = root.querySelector('[data-live="timeline"]');
     var empty = root.querySelector('[data-live="timeline-empty"]');

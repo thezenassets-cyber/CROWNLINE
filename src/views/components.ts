@@ -1,3 +1,4 @@
+import { progressTone } from '../domain/progress.ts';
 import { html, type SafeHtml } from '../lib/html.ts';
 import { COUNTRY_OPTIONS } from '../domain/countries.ts';
 import type { FieldErrors } from '../validation/schemas.ts';
@@ -125,7 +126,8 @@ export function badge(text: string, tone: 'neutral' | 'gold' | 'success' | 'warn
 }
 
 export function progressBar(percent: number, label: string): SafeHtml {
-  return html`<div class="progress">
+  const tone = progressTone(percent);
+  return html`<div class="progress progress-${tone}" data-progress-tone="${tone}">
     <div class="progress-meta"><span>${label}</span><strong>${percent}%</strong></div>
     <progress max="100" value="${percent}" aria-label="${label}: ${percent}%">${percent}%</progress>
   </div>`;

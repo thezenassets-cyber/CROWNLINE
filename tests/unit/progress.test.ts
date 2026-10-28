@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { computeProgress, customerProgress, milestoneSteps, type MilestoneDefinition, type ProgressEvent } from '../../src/domain/progress.ts';
+import { computeProgress, customerProgress, milestoneSteps, progressTone, type MilestoneDefinition, type ProgressEvent } from '../../src/domain/progress.ts';
 
 const defs: MilestoneDefinition[] = [
   ['booking_confirmed', 5, 10, false],
@@ -96,4 +96,15 @@ test('the customer percentage follows a coordinator figure until delivery', () =
   assert.deepEqual(customerProgress(45, 100, false), { percent: 45, source: 'milestone' });
   assert.deepEqual(customerProgress(45, 12.5, false), { percent: 45, source: 'milestone' });
   assert.deepEqual(customerProgress(95, 40, true), { percent: 100, source: 'milestone' });
+});
+
+test('progress colour follows the percentage', () => {
+  assert.equal(progressTone(0), 'red');
+  assert.equal(progressTone(15), 'red');
+  assert.equal(progressTone(24), 'red');
+  assert.equal(progressTone(25), 'yellow');
+  assert.equal(progressTone(60), 'yellow');
+  assert.equal(progressTone(74), 'yellow');
+  assert.equal(progressTone(75), 'green');
+  assert.equal(progressTone(100), 'green');
 });

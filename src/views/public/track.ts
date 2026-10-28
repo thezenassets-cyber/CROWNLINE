@@ -1,5 +1,6 @@
 import { html, type SafeHtml } from '../../lib/html.ts';
 import { translate, type Lang } from '../../i18n/index.ts';
+import { progressTone } from '../../domain/progress.ts';
 import { ASSET_VERSION } from '../layout.ts';
 import { formatDate, formatDateTime } from '../../lib/time.ts';
 import type { PublicTrackingView } from '../../services/tracking.ts';
@@ -64,6 +65,7 @@ export function trackingFeed(v: PublicTrackingView, lang: Lang) {
     status,
     explanation: v.status.explanation,
     progress: v.progressPercent,
+    progressTone: progressTone(v.progressPercent),
     progressNote: translate(lang, v.progressSource === 'coordinator' ? 'track.progressCoordinator' : 'track.progressMilestone', ''),
     timeline: v.timeline.map((e) => ({
       time: formatDateTime(e.occurredAt, e.timeZone),

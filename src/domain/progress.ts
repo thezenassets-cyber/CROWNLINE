@@ -26,6 +26,19 @@ export interface ShipmentProgressState {
 
 export const DELIVERED_MILESTONE = 'delivered';
 
+export type ProgressTone = 'red' | 'yellow' | 'green';
+
+/**
+ * Colour of the customer and staff progress bar.
+ * 0–24 early (collection / origin), 25–74 in transit, 75–100 near destination or delivered.
+ */
+export function progressTone(percent: number): ProgressTone {
+  const n = Number(percent);
+  if (!Number.isFinite(n) || n < 25) return 'red';
+  if (n < 75) return 'yellow';
+  return 'green';
+}
+
 /**
  * Derives a shipment's progress from its event history. Progress is the highest
  * milestone reached by any non-voided event, so events arriving out of order cannot

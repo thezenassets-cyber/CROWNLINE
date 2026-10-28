@@ -5,7 +5,7 @@ import { countryName } from '../../domain/countries.ts';
 import { EVENT_SOURCES, EXCEPTION_CATEGORIES, INFO_EVENT_TYPES, SYSTEM_EVENT_TYPES } from '../../domain/events.ts';
 import { formatMoney } from '../../domain/money.ts';
 import { can, ROLE_LABELS, STAFF_ROLES, canAssignRole, type Role } from '../../domain/permissions.ts';
-import type { MilestoneDefinition } from '../../domain/progress.ts';
+import { progressTone, type MilestoneDefinition } from '../../domain/progress.ts';
 import { formatDate, formatDateTime } from '../../lib/time.ts';
 import type { AuditRow } from '../../services/audit.ts';
 import type { Session } from '../../services/auth.ts';
@@ -132,7 +132,7 @@ function shipmentTable(rows: ShipmentListRow[], defs: Milestones): SafeHtml {
         <td>${serviceName(s.service_code)}</td>
         <td>${s.origin_city}, ${s.origin_country} → ${s.destination_city}, ${s.destination_country}</td>
         <td>${milestoneLabel(defs, s.current_milestone)}</td>
-        <td class="num">${s.progress_percent}%</td>
+        <td class="num">${badge(`${s.progress_percent}%`, { red: 'danger', yellow: 'warning', green: 'success' }[progressTone(s.progress_percent)])}</td>
         <td>${formatDateTime(s.last_event_at)}</td>
         <td>${stateBadge(s)}</td>
       </tr>`,
