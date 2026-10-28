@@ -58,17 +58,9 @@ function homeService(
   </a>`;
 }
 
-function stillFilm(src: string, alt: string, kicker: string, title: string): SafeHtml {
-  return html`<figure class="home-film home-film-still">
-    <img class="home-still" src="${src}" alt="${alt}" width="1280" height="800">
-    <figcaption><span>${kicker}</span> ${title}</figcaption>
-  </figure>`;
-}
-
-function film(src: string, poster: string, kicker: string, title: string): SafeHtml {
+function film(src: string, kicker: string, title: string): SafeHtml {
   return html`<figure class="home-film">
-    <img class="home-still" src="${poster}" alt="" width="1280" height="800">
-    <video autoplay muted loop playsinline poster="${poster}"><source src="${src}" type="video/mp4"></video>
+    <video autoplay muted loop playsinline preload="metadata"><source src="${src}" type="video/mp4"></video>
     <figcaption><span>${kicker}</span> ${title}</figcaption>
   </figure>`;
 }
@@ -81,8 +73,7 @@ export function homePage(config: AppConfig, calcValues: Values, lang: Lang = 'en
   return html`<div class="home">
   <section class="home-hero" aria-labelledby="hero-title">
     <div class="home-hero-media" aria-hidden="true">
-      <img class="home-hero-still" src="/images/ops/hero-poster.jpg" alt="" width="1600" height="1000">
-      <video class="home-hero-film" autoplay muted loop playsinline poster="/images/ops/hero-poster.jpg">
+      <video class="home-hero-film" autoplay muted loop playsinline preload="auto">
         <source src="/video/port-operations.mp4" type="video/mp4">
       </video>
       <div class="home-hero-scrim"></div>
@@ -118,9 +109,9 @@ export function homePage(config: AppConfig, calcValues: Values, lang: Lang = 'en
         <p>The confirmation names the service and the carrier.</p>
       </header>
       <div class="home-films">
-        ${stillFilm('/images/ops-air-freight.jpg', 'A white jet in flight with Crownline Express on the fuselage', 'Air', 'Freight operations')}
-        ${film('/video/ocean-freight-operations.mp4', '/images/ops-ocean-fleet.jpg', 'Ocean', 'Cargo fleet')}
-        ${film('/video/road-freight-operations.mp4', '/images/ops-ground-delivery.jpg', 'Road', 'Express ground delivery')}
+        ${film('/video/air-freight-operations.mp4', 'Air', 'Freight operations')}
+        ${film('/video/ocean-freight-operations.mp4', 'Ocean', 'Cargo fleet')}
+        ${film('/video/road-freight-operations.mp4', 'Road', 'Express ground delivery')}
       </div>
     </div>
   </section>

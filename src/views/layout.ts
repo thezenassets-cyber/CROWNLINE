@@ -4,7 +4,7 @@ import { SERVICES } from '../config/services.ts';
 import { LANGS, LANG_LABEL, textDir, translate, type Lang, type Theme } from '../i18n/index.ts';
 import { crownlineMark, icons } from './icons.ts';
 
-export const ASSET_VERSION = '0.13.0';
+export const ASSET_VERSION = '0.14.0';
 
 export interface PageMeta {
   title: string;
@@ -109,26 +109,74 @@ function footer(config: AppConfig, lang: Lang): SafeHtml {
   </footer>`;
 }
 
+const PUBLIC_IDENTITY = 'Crownline Express coordinates parcel and freight shipping. Customers receive a written quote before booking and a private tracking code after it.';
+
+function structuredData(config: AppConfig, meta: PageMeta, canonical: string, title: string): string {
+  const orgId = `${config.siteUrl}/#organization`;
+  const siteId = `${config.siteUrl}/#website`;
+  const organization: Record<string, unknown> = {
+    '@type': 'Organization',
+    '@id': orgId,
+    name: 'Crownline Express',
+    legalName: config.company.legalName ?? 'Crownline Express',
+    url: config.siteUrl,
+    logo: { '@type': 'ImageObject', url: `${config.siteUrl}/favicon.svg` },
+    description: PUBLIC_IDENTITY,
+    brand: { '@type': 'Brand', name: 'Crownline Express' },
+    knowsAbout: ['parcel shipping', 'freight coordination', 'shipment tracking'],
+  };
+  if (config.company.email) organization.email = config.company.email;
+  if (config.company.phone) organization.telephone = config.company.phone;
+  if (config.company.address) organization.address = config.company.address;
+  const graph: Record<string, unknown>[] = [
+    organization,
+    {
+      '@type': 'WebSite',
+      '@id': siteId,
+      name: 'Crownline Express',
+      url: config.siteUrl,
+      inLanguage: ['en', 'fr', 'es', 'ar', 'zh'],
+      publisher: { '@id': orgId },
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: `${config.siteUrl}/track?code={code}`,
+        'query-input': 'required name=code',
+      },
+    },
+    {
+      '@type': 'WebPage',
+      '@id': `${canonical}#webpage`,
+      url: canonical,
+      name: title,
+      description: meta.description,
+      isPartOf: { '@id': siteId },
+      about: { '@id': orgId },
+      inLanguage: meta.lang ?? 'en',
+    },
+    {
+      '@type': 'ItemList',
+      name: 'Crownline Express shipping services',
+      itemListElement: SERVICES.filter((service) => service.availability === 'quote_on_request').map((service, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        item: {
+          '@type': 'Service',
+          name: service.name,
+          description: service.shortDescription,
+          url: `${config.siteUrl}/services/${service.slug}`,
+          provider: { '@id': orgId },
+        },
+      })),
+    },
+  ];
+  return JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replace(/</g, '\\u003c');
+}
+
 export function publicLayout(config: AppConfig, meta: PageMeta, body: SafeHtml): string {
   const canonical = `${config.siteUrl}${meta.path === '/' ? '/' : meta.path}`;
   const title = meta.path === '/' ? meta.title : `${meta.title} | Crownline Express`;
-  const brandName = config.company.legalName ?? 'Crownline Express';
-  const ld = JSON.stringify({
-    '@context': 'https://schema.org',
-    '@graph': [
-      { '@type': 'Organization', name: brandName, url: config.siteUrl, logo: `${config.siteUrl}/favicon.svg` },
-      {
-        '@type': 'WebSite',
-        name: brandName,
-        url: config.siteUrl,
-        potentialAction: {
-          '@type': 'SearchAction',
-          target: `${config.siteUrl}/track?code={code}`,
-          'query-input': 'required name=code',
-        },
-      },
-    ],
-  }).replace(/</g, '\\u003c');
+  const preview = `${config.siteUrl}/images/ops/hero-poster.jpg`;
+  const ld = structuredData(config, meta, canonical, title);
   const lang = meta.lang ?? 'en';
   const theme = meta.theme ?? 'light';
   const quote = translate(lang, 'nav.quote', 'Request a quote');
@@ -140,21 +188,27 @@ export function publicLayout(config: AppConfig, meta: PageMeta, body: SafeHtml):
   <title>${title}</title>
   <meta name="description" content="${meta.description}">
   <link rel="canonical" href="${canonical}">
-  ${meta.noindex ? html`<meta name="robots" content="noindex, nofollow">` : ''}
+  ${meta.noindex
+    ? html`<meta name="robots" content="noindex, nofollow">`
+    : html`<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">`}
   <meta property="og:type" content="website">
   <meta property="og:title" content="${title}">
   <meta property="og:description" content="${meta.description}">
   <meta property="og:url" content="${canonical}">
   <meta property="og:site_name" content="Crownline Express">
-  <meta property="og:image" content="${config.siteUrl}/images/hero-container-port-blue-hour.jpg">
+  <meta property="og:image" content="${preview}">
+  <meta property="og:image:alt" content="A commercial port, used as the Crownline Express preview image">
   <meta property="og:locale" content="en_US">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${title}">
   <meta name="twitter:description" content="${meta.description}">
-  <meta name="twitter:image" content="${config.siteUrl}/images/hero-container-port-blue-hour.jpg">
+  <meta name="twitter:image" content="${preview}">
+  <meta name="twitter:image:alt" content="A commercial port, used as the Crownline Express preview image">
   <meta name="application-name" content="Crownline Express">
+  <meta name="apple-mobile-web-app-title" content="Crownline Express">
   <meta name="theme-color" content="${theme === 'dark' ? '#101820' : '#fbfaf6'}">
   <link rel="icon" href="/favicon.svg?v=${ASSET_VERSION}" type="image/svg+xml">
+  <link rel="manifest" href="/manifest.json">
   <link rel="preload" href="/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   ${meta.preloadImage ? html`<link rel="preload" as="image" href="${meta.preloadImage}" fetchpriority="high">` : ''}
   <link rel="stylesheet" href="/css/site.css?v=${ASSET_VERSION}">

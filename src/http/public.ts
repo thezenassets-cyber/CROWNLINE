@@ -111,10 +111,9 @@ export function publicRouter(ctx: AppContext): Router {
 
   r.get('/', (req, res) => {
     send(res, {
-      title: 'Crownline Express | Your Shipments. One Clear View.',
-      description: 'One coordinator, a written quote before booking, and a private tracking code after it.',
+      title: 'Crownline Express | Shipping coordination',
+      description: 'Crownline Express coordinates parcel and freight shipping. You receive a written quote before booking and a private tracking code after it.',
       path: '/',
-      preloadImage: '/images/hero-container-port-blue-hour.webp',
       bodyClass: 'page-home',
     }, homePage(config, queryValues(req, CALCULATOR_FIELDS), readPrefs(req).lang));
   });
@@ -252,7 +251,42 @@ export function publicRouter(ctx: AppContext): Router {
   });
 
   r.get('/robots.txt', (_req, res) => {
-    res.type('text/plain').send(`User-agent: *\nDisallow: /admin\nDisallow: /track?\nDisallow: /calculator?\nDisallow: /quote?\n\nSitemap: ${config.siteUrl}/sitemap.xml\n`);
+    res.type('text/plain; charset=utf-8').send(
+      `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /track?\nDisallow: /calculator?\nDisallow: /quote?\n\nSitemap: ${config.siteUrl}/sitemap.xml\n`,
+    );
+  });
+
+  r.get('/llms.txt', (_req, res) => {
+    const origin = config.siteUrl;
+    const services = SERVICES
+      .filter((service) => service.availability === 'quote_on_request')
+      .map((service) => `- [${service.name}](${origin}/services/${service.slug}): ${service.shortDescription}`);
+    const body = [
+      '# Crownline Express',
+      '',
+      `> Crownline Express coordinates parcel and freight shipping. A person reviews each request, sends a written quote before anything is booked, and issues a private tracking code afterwards.`,
+      '',
+      'Crownline Express is a shipping coordinator. It is not an airline, ocean carrier or trucking company. The carrier is named on the written confirmation. Tracking shows confirmed milestones only.',
+      '',
+      '## Identity',
+      '- Name: Crownline Express',
+      '- Domain: crownlineexpress.com',
+      `- Website: ${origin}`,
+      '- Languages: English, French, Spanish, Arabic, Chinese',
+      '',
+      '## Services',
+      ...services,
+      '',
+      '## For customers',
+      `- [Track a shipment](${origin}/track): a private tracking code. Map, Satellite and Terrain show the last confirmed scan.`,
+      `- [Shipping calculator](${origin}/calculator): weight, size and an estimated straight-line distance. A coordinator confirms the price in writing.`,
+      `- [Request a quote](${origin}/quote)`,
+      `- [About Crownline Express](${origin}/about)`,
+      `- [How it works](${origin}/how-it-works)`,
+      `- [Contact](${origin}/contact)`,
+      '',
+    ].join('\n');
+    res.type('text/plain; charset=utf-8').send(body);
   });
 
   r.get('/sitemap.xml', (_req, res) => {

@@ -27,16 +27,16 @@
   background: #08111f;
 }
 .home-hero-media { position: absolute; inset: 0; z-index: 0; }
-.home-hero-still,
 .home-hero-film {
   position: absolute;
   inset: 0;
+  z-index: 1;
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+  background: #08111f;
 }
-.home-hero-film { z-index: 1; }
 .home-hero-scrim {
   position: absolute;
   inset: 0;
@@ -77,17 +77,15 @@
 .home-hero .btn-ghost { background: transparent; color: #fbfaf6; border-color: rgba(251, 250, 246, 0.55); }
 .home-hero .btn-ghost:hover { background: rgba(251, 250, 246, 0.1); color: #fbfaf6; border-color: #fbfaf6; }
 
-.home-film video,
-.home-film .home-still {
+.home-film video {
   width: 100%;
   aspect-ratio: 16 / 10;
   object-fit: cover;
   display: block;
-  background: var(--sand);
+  position: relative;
+  z-index: 1;
+  background: #0c1730;
 }
-.home-film .home-still { position: absolute; inset: 0; height: 100%; }
-.home-film-still .home-still { position: relative; inset: auto; height: auto; }
-.home-film video { position: relative; z-index: 1; }
 .home-film figcaption {
   position: relative;
   z-index: 2;
@@ -395,14 +393,10 @@
 @media (max-width: 699px) {
   .home-films, .home-services { grid-template-columns: 1fr; }
   .home-films .home-film:nth-child(3) { grid-column: auto; width: auto; }
-  .home-film video, .home-film .home-still { aspect-ratio: 16 / 9; }
+  .home-film video { aspect-ratio: 16 / 9; }
   .home-service-photo { aspect-ratio: 5 / 4; }
   .home-service h3 { font-size: 1.7rem; }
   .home-service .home-service-body p { font-size: 1.12rem; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .home video { display: none; }
-  .home-film .home-still { position: static; height: auto; }
 }
 html[data-theme='dark'] .home-hero .btn-ghost,
 html[data-theme='dark'] .home-hero a.btn-ghost {

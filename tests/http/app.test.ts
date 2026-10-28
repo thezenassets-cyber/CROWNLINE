@@ -109,6 +109,29 @@ describe('public site', () => {
     }
   });
 
+  test('the homepage plays films without a still, and publishes a crawlable identity', async () => {
+    const c = new Client(base);
+    const home = await c.get('/');
+    assert.equal(home.status, 200);
+    assert.match(home.text, /<title>Crownline Express \| Shipping coordination<\/title>/);
+    assert.match(home.text, /src="\/video\/port-operations\.mp4"/);
+    assert.match(home.text, /src="\/video\/air-freight-operations\.mp4"/);
+    assert.doesNotMatch(home.text, /home-hero-still|poster=|ops-air-freight/);
+    assert.match(home.text, /"name":"Crownline Express"/);
+    const robots = await c.get('/robots.txt');
+    assert.equal(robots.status, 200);
+    assert.match(robots.text, /Sitemap: http:\/\/127\.0\.0\.1\/sitemap\.xml/);
+    assert.match(robots.text, /Disallow: \/admin/);
+    const identity = await c.get('/llms.txt');
+    assert.equal(identity.status, 200);
+    assert.match(identity.text, /# Crownline Express/);
+    assert.match(identity.text, /crownlineexpress\.com/);
+    assert.doesNotMatch(identity.text, /DHL|FedEx|Maersk|99\.9%|190 countries/);
+    const manifest = await c.get('/manifest.json');
+    assert.equal(manifest.status, 200);
+    assert.match(manifest.text, /"name": "Crownline Express"/);
+  });
+
   test('legacy server files, data and environment files are never served', async () => {
     const c = new Client(base);
     for (const path of ['/server.js', '/server-enhanced.js', '/data/shipments.json', '/.env', '/legacy/server.js', '/package.json', '/src/server.ts', '/admin.html']) {

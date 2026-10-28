@@ -18,12 +18,11 @@ dimensions, and lazy loading below the fold.
 
 | File (`public/images/…`) | Used on | Alt text approach |
 | --- | --- | --- |
-| `hero-container-port-blue-hour` | Home hero still and video poster, social preview | Decorative (`alt=""`) |
-| `public/video/port-operations.mp4` | Home hero background, muted and looping | Decorative |
-| `public/video/air-freight-operations.mp4` | Home air-freight film (Pexels 3605315) | Decorative |
+| `public/video/port-operations.mp4` | Home hero background, muted and looping. No still is shown before it. | Decorative |
+| `public/video/air-freight-operations.mp4` | Home air-freight operations film (Pexels 3605315). No still is shown before it. | Decorative |
 | `public/video/ocean-freight-operations.mp4` | Home ocean-freight film (Pexels 4813182) | Decorative |
 | `public/video/road-freight-operations.mp4` | Home road-freight film (Pexels 2053100) | Decorative |
-| `ops/hero-poster.jpg` | Home hero poster (Pexels 906494) | Decorative |
+| `ops/hero-poster.jpg` | Social preview image only (Pexels 906494). Not shown in the hero. | Decorative |
 | `ops/parcel-floor.jpg` | Home overview and coverage still (Pexels 4481259) | Scene description |
 | `ops/handlers.jpg` | Home overview and collection still (Pexels 4391470) | Scene description |
 | `ops/loading.jpg` | Home overview and linehaul still (Pexels 1267338) | Scene description |
@@ -43,7 +42,7 @@ dimensions, and lazy loading below the fold.
 | `home/warehousing.jpg` | Home warehousing card. Generated aisle; storage is not offered | A carton aisle |
 | `home/customs-documents.jpg` | Home customs-documents card. Text in the picture is not legible | Papers on a desk |
 | `home/tracking.jpg` | Home tracking card. Generated office, not a Crownline workplace | A world map on a screen |
-| `ops-air-freight` | Home air-freight still. Same generated jet as the service card, marked Crownline Express. | A white jet in flight with Crownline Express on the fuselage |
+| `ops-air-freight` | Unused. The operations row uses the air-freight film, not this still. | A white jet in flight with Crownline Express on the fuselage |
 | `ops-ocean-fleet` | Home ocean-freight film poster | Scene description |
 | `ops-ground-delivery` | Home road-freight film poster | Scene description |
 | `overview-parcel-floor` | Home company overview | Scene description |

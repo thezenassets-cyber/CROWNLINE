@@ -1,0 +1,19 @@
+{
+  "name": "Crownline Express",
+  "short_name": "Crownline",
+  "description": "Shipping coordination. A written quote before booking, and a private tracking code after it.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "browser",
+  "background_color": "#08111f",
+  "theme_color": "#fbfaf6",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    }
+  ]
+}

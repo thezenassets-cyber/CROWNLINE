@@ -25,7 +25,7 @@ function head(title: string): SafeHtml {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>${title} | Crownline Admin</title>
-  <link rel="icon" href="/favicon.svg?v=0.13.0" type="image/svg+xml">
+  <link rel="icon" href="/favicon.svg?v=${ASSET_VERSION}" type="image/svg+xml">
   <link rel="stylesheet" href="/css/site.css?v=${ASSET_VERSION}">
   <script src="/js/site.js?v=${ASSET_VERSION}" defer></script>
 </head>`;
