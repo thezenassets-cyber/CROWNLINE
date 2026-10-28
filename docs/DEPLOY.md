@@ -6,6 +6,11 @@ the domain by itself does not run the application.
 ## 1. GitHub
 
 The source remote is `https://github.com/thezenassets-cyber/CROWNLINE.git`.
+Push from a GitHub account that can write to that repository:
+
+```bash
+git push -u origin main
+```
 
 ## 2. Host
 

@@ -7,17 +7,21 @@ privacy-safe shipment tracking and business quote requests, and a role-based
 operations console for staff who manage shipments, tracking events, exceptions,
 tracking codes and documents.
 
-This is a working first milestone, not a finished commercial product. See
-[`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for exactly what
-is implemented and tested, and what is not.
+The public site is Crownline Express (`crownlineexpress.org`). See
+[`docs/IMPLEMENTATION_STATUS.md`](docs/IMPLEMENTATION_STATUS.md) for what is
+implemented and tested, and [`docs/DEPLOY.md`](docs/DEPLOY.md) for hosting and
+Spaceship DNS.
+
+Source remote: `https://github.com/thezenassets-cyber/CROWNLINE.git`.
 
 ## What it is (and is not)
 
-- **Tracking reflects staff-confirmed events.** No carrier integration is
-  connected yet, so nothing is presented as live carrier tracking, and no map or
-  vehicle position is shown.
-- **Prices are demonstration figures unless an owner-approved rate card is
-  configured.** Demo estimates are labelled as such on every page and PDF.
+- **Tracking reflects staff-confirmed events.** The tracking page can show map,
+  satellite and terrain views of the booked origin, destination and last
+  confirmed place. It does not show a live vehicle position until a tracking
+  feed is connected.
+- **Prices are labelled sample figures unless an owner-approved rate card is
+  configured.** A coordinator confirms every price in writing before booking.
 - **No payments, emails or SMS are sent.** The data model and architecture are
   prepared for them; the settings page reports them as "Not configured".
 - **Legal pages are drafts** and must be reviewed by a qualified professional
