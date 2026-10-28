@@ -1,0 +1,45 @@
+# Render Blueprint for Crownline Express.
+# Connect this GitHub repository in Render, then apply the Blueprint.
+# After the first deploy, add crownlineexpress.org as a custom domain and
+# set SITE_URL to https://crownlineexpress.org.
+
+previewsEnabled: false
+
+services:
+  - type: web
+    name: crownline-express
+    runtime: node
+    plan: starter
+    region: frankfurt
+    nodeVersion: 22.18.0
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /healthz
+    autoDeployTrigger: commit
+    disk:
+      name: crownline-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: TRUST_PROXY
+        value: "1"
+      - key: LOG_LEVEL
+        value: info
+      - key: ALLOW_EMBEDDED_DB
+        value: "true"
+      - key: EMBEDDED_DB_DIR
+        value: /var/data/pglite
+      - key: DATABASE_SSL
+        value: require
+      - key: PRICING_MODE
+        value: disabled
+      - key: COMPANY_LEGAL_NAME
+        value: Crownline Express
+      - key: TRACKING_CODE_SECRET
+        generateValue: true
+      - key: TRACKING_CODE_TTL_DAYS
+        value: "0"

@@ -115,10 +115,11 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env, overrides: P
     warnings.push('PRICING_MODE=demo in production: all prices are labelled as demonstration estimates.');
   }
 
-  const siteUrl = e.SITE_URL.replace(/\/$/, '');
+  const renderUrl = typeof source.RENDER_EXTERNAL_URL === 'string' ? source.RENDER_EXTERNAL_URL.trim().replace(/\/$/, '') : '';
+  const siteUrl = (e.SITE_URL === 'http://localhost:3000' && renderUrl ? renderUrl : e.SITE_URL).replace(/\/$/, '');
   const siteOrigin = new URL(siteUrl).origin;
   if (isProduction && !siteUrl.startsWith('https://')) {
-    errors.push('SITE_URL must use https:// in production.');
+    errors.push('SITE_URL must use https:// in production. On Render, set SITE_URL or rely on RENDER_EXTERNAL_URL.');
   }
 
   if (errors.length > 0) throw new ConfigError(errors.join(' '));

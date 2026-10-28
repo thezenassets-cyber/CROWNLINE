@@ -30,6 +30,13 @@
     });
   });
 
+  document.querySelectorAll('video source').forEach(function (source) {
+    source.addEventListener('error', function () {
+      var video = source.parentElement;
+      if (video && video.tagName === 'VIDEO') video.remove();
+    });
+  });
+
   // Keep the hero still when the visitor has asked for less motion.
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     document.querySelectorAll('video').forEach(function (video) {

@@ -3,7 +3,7 @@ import type { AppConfig } from '../config/env.ts';
 import { SERVICES } from '../config/services.ts';
 import { crownlineMark, icons } from './icons.ts';
 
-export const ASSET_VERSION = '0.3.0';
+export const ASSET_VERSION = '0.4.0';
 
 export interface PageMeta {
   title: string;
