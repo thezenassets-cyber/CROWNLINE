@@ -4,7 +4,7 @@ import { SERVICES } from '../config/services.ts';
 import { LANGS, LANG_LABEL, textDir, translate, type Lang, type Theme } from '../i18n/index.ts';
 import { crownlineMark, icons } from './icons.ts';
 
-export const ASSET_VERSION = '0.15.0';
+export const ASSET_VERSION = '0.17.0';
 
 export interface PageMeta {
   title: string;

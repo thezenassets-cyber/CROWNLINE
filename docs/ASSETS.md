@@ -68,6 +68,6 @@ Both are licensed under the SIL Open Font License 1.1 and are copied from the
 
 ## Icons and logo
 
-The seal (`public/favicon.svg` and the inline brand mark) is a navy disc, a gold ring, an ivory crown and a gold baseline. It and all
+The brand mark (`public/favicon.svg` and the inline crownlineMark) is a navy rounded tile, an ivory three-peak crown and a gold baseline (“crown + line”). It and all
 interface icons (`src/views/icons.ts`) are simple original SVGs drawn for this
 project.
